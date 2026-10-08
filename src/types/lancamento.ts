@@ -1,20 +1,23 @@
 import { z } from 'zod'
 
-const valorSchema = z.preprocess(
-  (valor) => (typeof valor === 'number' ? valor.toString() : valor),
-  z
-    .string({ message: 'Informe um valor' })
-    .min(1, 'Informe um valor')
-    .regex(/^-?\d+(\.\d{1,2})?$/, 'Use no máximo duas casas decimais'),
-)
-  .transform(Number)
-  .pipe(
-    z
-      .number()
-      .finite('Informe um valor válido')
-      .positive('O valor deve ser maior que zero')
-      .max(1_000_000_000, 'Valor muito alto'),
-  )
+import { parseValorMonetario } from '@/lib/formatters'
+
+function valorMaiorQueZero(texto: string) {
+  const valor = parseValorMonetario(texto)
+  return valor !== null && valor > 0
+}
+
+function valorDentroDoLimite(texto: string) {
+  const valor = parseValorMonetario(texto)
+  return valor !== null && valor <= 1_000_000_000
+}
+
+const valorFormSchema = z
+  .string({ message: 'Informe um valor' })
+  .min(1, 'Informe um valor')
+  .refine((texto) => parseValorMonetario(texto) !== null, 'Informe um valor válido, ex: 1.234,56')
+  .refine(valorMaiorQueZero, 'O valor deve ser maior que zero')
+  .refine(valorDentroDoLimite, 'Valor muito alto')
 
 function dataValida(data: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return false
@@ -31,7 +34,7 @@ const dataSchema = z
 export const receitaFormSchema = z.object({
   dataEmissao: dataSchema,
   descricao: z.string().trim().min(1, 'Informe a descrição'),
-  valor: valorSchema,
+  valor: valorFormSchema,
 })
 
 export const despesaFormSchema = receitaFormSchema
@@ -43,17 +46,26 @@ export const despesaFormSchema = receitaFormSchema
     path: ['vencimento'],
   })
 
+/** Valores crus do formulário: `valor` ainda é texto livre (ex: "1.234,56"), convertido para
+ * número só ao salvar o lançamento — ver `parseValorMonetario` em `@/lib/formatters`. */
 export type ReceitaFormValues = z.infer<typeof receitaFormSchema>
 export type DespesaFormValues = z.infer<typeof despesaFormSchema>
 
-export interface Receita extends ReceitaFormValues {
+export interface Receita {
   id: string
   tipo: 'receita'
+  dataEmissao: string
+  descricao: string
+  valor: number
 }
 
-export interface Despesa extends DespesaFormValues {
+export interface Despesa {
   id: string
   tipo: 'despesa'
+  dataEmissao: string
+  descricao: string
+  valor: number
+  vencimento: string
 }
 
 export type Lancamento = Receita | Despesa

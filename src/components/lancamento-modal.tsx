@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 
+import { CampoValor } from '@/components/campo-valor'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -28,13 +29,13 @@ interface LancamentoModalProps {
 const valoresPadraoReceita: ReceitaFormValues = {
   dataEmissao: '',
   descricao: '',
-  valor: 0,
+  valor: '',
 }
 
 const valoresPadraoDespesa: DespesaFormValues = {
   dataEmissao: '',
   descricao: '',
-  valor: 0,
+  valor: '',
   vencimento: '',
 }
 
@@ -102,7 +103,7 @@ function FormularioReceita({ onOpenChange }: { onOpenChange: (open: boolean) => 
               <FormItem>
                 <FormLabel>Valor</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" min="0" placeholder="0,00" {...field} />
+                  <CampoValor {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -172,7 +173,7 @@ function FormularioDespesa({ onOpenChange }: { onOpenChange: (open: boolean) => 
               <FormItem>
                 <FormLabel>Valor</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" min="0" placeholder="0,00" {...field} />
+                  <CampoValor {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

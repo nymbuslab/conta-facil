@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 
+import { parseValorMonetario } from '@/lib/formatters'
 import { lancamentosIniciais } from '@/lib/mock-data'
 import type { Despesa, DespesaFormValues, Lancamento, Receita, ReceitaFormValues } from '@/types/lancamento'
 
@@ -49,11 +50,36 @@ export function LancamentosProvider({ children }: { children: ReactNode }) {
   const saldoAcumulado = arredondar(saldoReceita - saldoDespesa)
 
   function adicionarReceita(dados: ReceitaFormValues) {
-    setLancamentos((atual) => [...atual, { ...dados, id: gerarId(), tipo: 'receita' }])
+    const valor = parseValorMonetario(dados.valor)
+    if (valor === null) return
+
+    setLancamentos((atual) => [
+      ...atual,
+      {
+        id: gerarId(),
+        tipo: 'receita',
+        dataEmissao: dados.dataEmissao,
+        descricao: dados.descricao,
+        valor,
+      },
+    ])
   }
 
   function adicionarDespesa(dados: DespesaFormValues) {
-    setLancamentos((atual) => [...atual, { ...dados, id: gerarId(), tipo: 'despesa' }])
+    const valor = parseValorMonetario(dados.valor)
+    if (valor === null) return
+
+    setLancamentos((atual) => [
+      ...atual,
+      {
+        id: gerarId(),
+        tipo: 'despesa',
+        dataEmissao: dados.dataEmissao,
+        descricao: dados.descricao,
+        valor,
+        vencimento: dados.vencimento,
+      },
+    ])
   }
 
   return (
