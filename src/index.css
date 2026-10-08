@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 214 30% 96%;
+    --foreground: 220 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 47% 11%;
+
+    --primary: 222 100% 55%;
+    --primary-foreground: 214 30% 96%;
+
+    --secondary: 214 25% 91%;
+    --secondary-foreground: 220 47% 11%;
+
+    --muted: 214 25% 93%;
+    --muted-foreground: 215 19% 45%;
+
+    --accent: 222 100% 55%;
+    --accent-foreground: 214 30% 96%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 175 77% 32%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 244 58% 51%;
+    --warning-foreground: 210 40% 98%;
+
+    --info: 215 19% 45%;
+    --info-foreground: 210 40% 98%;
+
+    --border: 215 20% 82%;
+    --input: 215 20% 82%;
+    --ring: 222 100% 55%;
+
+    --radius: 0.25rem;
+  }
+
+  .dark {
+    --background: 220 47% 9%;
+    --foreground: 214 30% 96%;
+
+    --card: 220 40% 12%;
+    --card-foreground: 214 30% 96%;
+
+    --popover: 220 40% 12%;
+    --popover-foreground: 214 30% 96%;
+
+    --primary: 222 100% 60%;
+    --primary-foreground: 220 47% 9%;
+
+    --secondary: 220 30% 18%;
+    --secondary-foreground: 214 30% 96%;
+
+    --muted: 220 30% 16%;
+    --muted-foreground: 215 19% 65%;
+
+    --accent: 222 100% 60%;
+    --accent-foreground: 220 47% 9%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 175 70% 40%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 244 58% 62%;
+    --warning-foreground: 210 40% 98%;
+
+    --info: 215 19% 65%;
+    --info-foreground: 220 47% 9%;
+
+    --border: 220 25% 22%;
+    --input: 220 25% 22%;
+    --ring: 222 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings:
+      'cv11',
+      'ss01',
+      'ss03';
+  }
+
+  .font-display {
+    font-feature-settings: 'tnum' on, 'zero' on;
+  }
+}
