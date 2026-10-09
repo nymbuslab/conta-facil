@@ -19,12 +19,14 @@ export function SaldoCard({ titulo, valor }: SaldoCardProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{titulo}</CardTitle>
-        <Icone className={`size-4 ${cor}`} aria-hidden="true" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1.5">
+        <CardTitle className="truncate text-xs font-medium text-muted-foreground">{titulo}</CardTitle>
+        <Icone className={`size-3.5 shrink-0 ${cor}`} aria-hidden="true" />
       </CardHeader>
-      <CardContent>
-        <p className={`font-display text-2xl font-semibold ${cor}`}>{formatarMoeda(valor)}</p>
+      <CardContent className="p-3 pt-0">
+        <p className={`truncate font-display text-base font-semibold sm:text-xl ${cor}`}>
+          {formatarMoeda(valor)}
+        </p>
       </CardContent>
     </Card>
   )

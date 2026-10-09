@@ -33,7 +33,11 @@ export function DataTable<TData>({
   }
 
   return (
-    <div className="rounded-lg border border-border">
+    <div className="relative overflow-hidden rounded-lg border border-border">
+      <div
+        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-card to-transparent"
+        aria-hidden="true"
+      />
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
