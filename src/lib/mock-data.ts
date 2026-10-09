@@ -29,6 +29,10 @@ export const lancamentosIniciais: Lancamento[] = [
     descricao: 'Aluguel e condomínio',
     valor: 1850,
     vencimento: '2026-10-10',
+    paga: false,
+    parcelamentoId: null,
+    parcelaAtual: null,
+    totalParcelas: null,
   },
   {
     id: 'd2',
@@ -37,6 +41,10 @@ export const lancamentosIniciais: Lancamento[] = [
     descricao: 'Internet fibra',
     valor: 139,
     vencimento: '2026-10-15',
+    paga: false,
+    parcelamentoId: null,
+    parcelaAtual: null,
+    totalParcelas: null,
   },
   {
     id: 'd3',
@@ -45,5 +53,9 @@ export const lancamentosIniciais: Lancamento[] = [
     descricao: 'Fatura cartão de crédito',
     valor: 1130.5,
     vencimento: '2026-10-25',
+    paga: false,
+    parcelamentoId: null,
+    parcelaAtual: null,
+    totalParcelas: null,
   },
 ]

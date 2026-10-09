@@ -30,3 +30,7 @@ dist-ssr
 
 # Cross-review scratch output
 .cross-review/
+
+# sprintx — rastro local e estado da barra de status
+docs/eventos/
+.expx/estado.json

@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 
 import { CampoValor } from '@/components/campo-valor'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,8 @@ const valoresPadraoDespesa: DespesaFormValues = {
   descricao: '',
   valor: '',
   vencimento: '',
+  parcelado: false,
+  quantidadeParcelas: undefined,
 }
 
 export function LancamentoModal({ tipo, onOpenChange }: LancamentoModalProps) {
@@ -126,6 +129,7 @@ function FormularioDespesa({ onOpenChange }: { onOpenChange: (open: boolean) => 
     resolver: zodResolver(despesaFormSchema),
     defaultValues: valoresPadraoDespesa,
   })
+  const parcelado = useWatch({ control: form.control, name: 'parcelado' })
 
   function onSubmit(dados: DespesaFormValues) {
     adicionarDespesa(dados)
@@ -168,10 +172,46 @@ function FormularioDespesa({ onOpenChange }: { onOpenChange: (open: boolean) => 
           />
           <FormField
             control={form.control}
+            name="parcelado"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    id="parcelado"
+                    checked={field.value}
+                    onCheckedChange={(marcado) => {
+                      field.onChange(marcado)
+                      if (!marcado) form.setValue('quantidadeParcelas', undefined)
+                    }}
+                  />
+                </FormControl>
+                <FormLabel htmlFor="parcelado" className="cursor-pointer">
+                  Parcelado?
+                </FormLabel>
+              </FormItem>
+            )}
+          />
+          {parcelado && (
+            <FormField
+              control={form.control}
+              name="quantidadeParcelas"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantidade de parcelas</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="2" step="1" placeholder="Ex: 3" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+          <FormField
+            control={form.control}
             name="valor"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Valor</FormLabel>
+                <FormLabel>{parcelado ? 'Valor total da dívida' : 'Valor'}</FormLabel>
                 <FormControl>
                   <CampoValor {...field} />
                 </FormControl>

@@ -1,7 +1,10 @@
+import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 
+import { ConfirmarPagamentoDialog } from '@/components/confirmar-pagamento-dialog'
 import { DataTable } from '@/components/data-table'
 import { formatarData, formatarMoeda } from '@/lib/formatters'
+import { useLancamentos } from '@/state/lancamentos-context'
 import type { Despesa, Receita } from '@/types/lancamento'
 
 const colunasReceita: ColumnDef<Receita, unknown>[] = [
@@ -25,31 +28,52 @@ const colunasReceita: ColumnDef<Receita, unknown>[] = [
   },
 ]
 
-const colunasDespesa: ColumnDef<Despesa, unknown>[] = [
-  {
-    accessorKey: 'dataEmissao',
-    header: 'Emissão',
-    cell: ({ getValue }) => formatarData(getValue<string>()),
-  },
-  {
-    accessorKey: 'descricao',
-    header: 'Descrição',
-  },
-  {
-    accessorKey: 'valor',
-    header: 'Valor',
-    cell: ({ getValue }) => (
-      <span className="font-display font-medium text-destructive">
-        {formatarMoeda(getValue<number>())}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'vencimento',
-    header: 'Vencimento',
-    cell: ({ getValue }) => formatarData(getValue<string>()),
-  },
-]
+function criarColunasDespesa(aoSelecionarPendente: (despesa: Despesa) => void): ColumnDef<Despesa, unknown>[] {
+  return [
+    {
+      accessorKey: 'dataEmissao',
+      header: 'Emissão',
+      cell: ({ getValue }) => formatarData(getValue<string>()),
+    },
+    {
+      accessorKey: 'descricao',
+      header: 'Descrição',
+    },
+    {
+      accessorKey: 'valor',
+      header: 'Valor',
+      cell: ({ getValue }) => (
+        <span className="font-display font-medium text-destructive">
+          {formatarMoeda(getValue<number>())}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'vencimento',
+      header: 'Vencimento',
+      cell: ({ getValue }) => formatarData(getValue<string>()),
+    },
+    {
+      accessorKey: 'paga',
+      header: 'Status',
+      cell: ({ getValue, row }) =>
+        getValue<boolean>() ? (
+          <span className="text-xs font-medium text-muted-foreground">Pago</span>
+        ) : (
+          <button
+            type="button"
+            className="text-xs font-medium text-foreground underline-offset-2 hover:underline"
+            onClick={(evento) => {
+              evento.stopPropagation()
+              aoSelecionarPendente(row.original)
+            }}
+          >
+            Pendente
+          </button>
+        ),
+    },
+  ]
+}
 
 interface ListaLancamentosProps {
   receitas: Receita[]
@@ -57,6 +81,15 @@ interface ListaLancamentosProps {
 }
 
 export function ListaLancamentos({ receitas, despesas }: ListaLancamentosProps) {
+  const { marcarComoPaga } = useLancamentos()
+  const [despesaSelecionada, setDespesaSelecionada] = useState<Despesa | null>(null)
+  const colunasDespesa = useMemo(() => criarColunasDespesa(setDespesaSelecionada), [])
+
+  function confirmarPagamento(id: string) {
+    marcarComoPaga(id)
+    setDespesaSelecionada(null)
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <section>
@@ -74,8 +107,16 @@ export function ListaLancamentos({ receitas, despesas }: ListaLancamentosProps) 
           columns={colunasDespesa}
           data={despesas}
           mensagemVazio="Nenhuma despesa lançada ainda."
+          onRowClick={setDespesaSelecionada}
+          linhaDesabilitada={(despesa) => despesa.paga}
         />
       </section>
+
+      <ConfirmarPagamentoDialog
+        despesa={despesaSelecionada}
+        onCancelar={() => setDespesaSelecionada(null)}
+        onConfirmar={confirmarPagamento}
+      />
     </div>
   )
 }

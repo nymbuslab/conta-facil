@@ -16,7 +16,7 @@ export function RegistrarFab() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 flex flex-col items-end gap-2">
+      <div className="fixed bottom-20 right-6 flex flex-col items-end gap-2">
         {aberto && (
           <div className="flex flex-col items-end gap-2 animate-speed-dial-in">
             <Button

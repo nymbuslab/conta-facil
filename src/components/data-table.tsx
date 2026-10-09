@@ -1,14 +1,23 @@
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 
 interface DataTableProps<TData> {
   columns: ColumnDef<TData, unknown>[]
   data: TData[]
   mensagemVazio: string
+  onRowClick?: (linha: TData) => void
+  linhaDesabilitada?: (linha: TData) => boolean
 }
 
-export function DataTable<TData>({ columns, data, mensagemVazio }: DataTableProps<TData>) {
+export function DataTable<TData>({
+  columns,
+  data,
+  mensagemVazio,
+  onRowClick,
+  linhaDesabilitada,
+}: DataTableProps<TData>) {
   const table = useReactTable({
     data,
     columns,
@@ -40,15 +49,24 @@ export function DataTable<TData>({ columns, data, mensagemVazio }: DataTableProp
           ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
+          {table.getRowModel().rows.map((row) => {
+            const desabilitada = linhaDesabilitada?.(row.original) ?? false
+            const clicavel = Boolean(onRowClick) && !desabilitada
+
+            return (
+              <TableRow
+                key={row.id}
+                onClick={clicavel ? () => onRowClick?.(row.original) : undefined}
+                className={cn(clicavel && 'cursor-pointer')}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 
+import { adicionarMeses } from '@/lib/datas'
 import { parseValorMonetario } from '@/lib/formatters'
 import { lancamentosIniciais } from '@/lib/mock-data'
 import type { Despesa, DespesaFormValues, Lancamento, Receita, ReceitaFormValues } from '@/types/lancamento'
@@ -10,9 +11,9 @@ interface LancamentosContextValue {
   despesas: Despesa[]
   saldoReceita: number
   saldoDespesa: number
-  saldoAcumulado: number
   adicionarReceita: (dados: ReceitaFormValues) => void
   adicionarDespesa: (dados: DespesaFormValues) => void
+  marcarComoPaga: (id: string) => void
 }
 
 const LancamentosContext = createContext<LancamentosContextValue | null>(null)
@@ -33,6 +34,36 @@ function ehDespesa(lancamento: Lancamento): lancamento is Despesa {
   return lancamento.tipo === 'despesa'
 }
 
+function gerarParcelas(
+  dados: DespesaFormValues,
+  valorTotal: number,
+  quantidadeParcelas: number,
+): Despesa[] {
+  const parcelamentoId = gerarId()
+  const totalCentavos = Math.round(valorTotal * 100)
+  const centavosBase = Math.floor(totalCentavos / quantidadeParcelas)
+  const resto = totalCentavos - centavosBase * quantidadeParcelas
+
+  return Array.from({ length: quantidadeParcelas }, (_, indice) => {
+    const numeroParcela = indice + 1
+    const ehUltima = numeroParcela === quantidadeParcelas
+    const centavosParcela = centavosBase + (ehUltima ? resto : 0)
+
+    return {
+      id: gerarId(),
+      tipo: 'despesa',
+      dataEmissao: dados.dataEmissao,
+      descricao: dados.descricao,
+      valor: centavosParcela / 100,
+      vencimento: adicionarMeses(dados.vencimento, indice),
+      paga: false,
+      parcelamentoId,
+      parcelaAtual: numeroParcela,
+      totalParcelas: quantidadeParcelas,
+    }
+  })
+}
+
 export function LancamentosProvider({ children }: { children: ReactNode }) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(lancamentosIniciais)
 
@@ -47,8 +78,6 @@ export function LancamentosProvider({ children }: { children: ReactNode }) {
     () => arredondar(despesas.reduce((soma, l) => soma + l.valor, 0)),
     [despesas],
   )
-  const saldoAcumulado = arredondar(saldoReceita - saldoDespesa)
-
   function adicionarReceita(dados: ReceitaFormValues) {
     const valor = parseValorMonetario(dados.valor)
     if (valor === null) return
@@ -66,8 +95,14 @@ export function LancamentosProvider({ children }: { children: ReactNode }) {
   }
 
   function adicionarDespesa(dados: DespesaFormValues) {
-    const valor = parseValorMonetario(dados.valor)
-    if (valor === null) return
+    const valorTotal = parseValorMonetario(dados.valor)
+    if (valorTotal === null) return
+
+    if (dados.parcelado && dados.quantidadeParcelas) {
+      const novasDespesas = gerarParcelas(dados, valorTotal, dados.quantidadeParcelas)
+      setLancamentos((atual) => [...atual, ...novasDespesas])
+      return
+    }
 
     setLancamentos((atual) => [
       ...atual,
@@ -76,10 +111,24 @@ export function LancamentosProvider({ children }: { children: ReactNode }) {
         tipo: 'despesa',
         dataEmissao: dados.dataEmissao,
         descricao: dados.descricao,
-        valor,
+        valor: valorTotal,
         vencimento: dados.vencimento,
+        paga: false,
+        parcelamentoId: null,
+        parcelaAtual: null,
+        totalParcelas: null,
       },
     ])
+  }
+
+  function marcarComoPaga(id: string) {
+    setLancamentos((atual) =>
+      atual.map((lancamento) =>
+        lancamento.tipo === 'despesa' && lancamento.id === id
+          ? { ...lancamento, paga: true }
+          : lancamento,
+      ),
+    )
   }
 
   return (
@@ -90,9 +139,9 @@ export function LancamentosProvider({ children }: { children: ReactNode }) {
         despesas,
         saldoReceita,
         saldoDespesa,
-        saldoAcumulado,
         adicionarReceita,
         adicionarDespesa,
+        marcarComoPaga,
       }}
     >
       {children}
