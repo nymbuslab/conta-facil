@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { formatarMoeda } from '@/lib/formatters'
+import { formatarData, formatarMoeda } from '@/lib/formatters'
 import type { Despesa } from '@/types/lancamento'
 
 interface ConfirmarPagamentoDialogProps {
@@ -27,9 +27,12 @@ export function ConfirmarPagamentoDialog({
           <DialogTitle>Deseja marcar como paga?</DialogTitle>
         </DialogHeader>
         {despesa && (
-          <p className="text-sm text-muted-foreground">
-            <span>{despesa.descricao}</span> · <span>{formatarMoeda(despesa.valor)}</span>
-          </p>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">{despesa.descricao}</p>
+            <p className="text-sm text-muted-foreground">
+              Venc. {formatarData(despesa.vencimento)} · {formatarMoeda(despesa.valor)}
+            </p>
+          </div>
         )}
         <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" onClick={onCancelar} className="flex-1">

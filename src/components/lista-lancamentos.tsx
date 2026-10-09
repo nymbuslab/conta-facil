@@ -11,6 +11,14 @@ const colunasReceita: ColumnDef<Receita, unknown>[] = [
   {
     accessorKey: 'descricao',
     header: 'Descrição',
+    cell: ({ row }) => (
+      <div className="max-w-[9rem] sm:max-w-xs">
+        <p className="truncate">{row.original.descricao}</p>
+        <p className="text-xs text-muted-foreground">
+          Dt Entrada {formatarData(row.original.dataEmissao)}
+        </p>
+      </div>
+    ),
   },
   {
     accessorKey: 'valor',
@@ -29,9 +37,11 @@ function criarColunasDespesa(aoSelecionarPendente: (despesa: Despesa) => void): 
       accessorKey: 'descricao',
       header: 'Descrição',
       cell: ({ row }) => (
-        <div>
-          <p>{row.original.descricao}</p>
-          <p className="text-xs text-muted-foreground">{formatarData(row.original.vencimento)}</p>
+        <div className="max-w-[9rem] sm:max-w-xs">
+          <p className="truncate">{row.original.descricao}</p>
+          <p className="text-xs text-muted-foreground">
+            Venc. {formatarData(row.original.vencimento)}
+          </p>
         </div>
       ),
     },
