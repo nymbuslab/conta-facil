@@ -50,9 +50,6 @@ describe('LancamentoModal — Despesa parcelada', () => {
 
     expect(screen.getByTestId('total-despesas')).toHaveTextContent('3')
 
-    fireEvent.change(screen.getByLabelText('Data de emissão'), {
-      target: { value: '2026-10-05' },
-    })
     fireEvent.change(screen.getByLabelText('Descrição'), {
       target: { value: 'Notebook' },
     })

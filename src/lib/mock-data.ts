@@ -25,7 +25,6 @@ export const lancamentosIniciais: Lancamento[] = [
   {
     id: 'd1',
     tipo: 'despesa',
-    dataEmissao: '2026-10-02',
     descricao: 'Aluguel e condomínio',
     valor: 1850,
     vencimento: '2026-10-10',
@@ -37,7 +36,6 @@ export const lancamentosIniciais: Lancamento[] = [
   {
     id: 'd2',
     tipo: 'despesa',
-    dataEmissao: '2026-10-08',
     descricao: 'Internet fibra',
     valor: 139,
     vencimento: '2026-10-15',
@@ -49,7 +47,6 @@ export const lancamentosIniciais: Lancamento[] = [
   {
     id: 'd3',
     tipo: 'despesa',
-    dataEmissao: '2026-10-14',
     descricao: 'Fatura cartão de crédito',
     valor: 1130.5,
     vencimento: '2026-10-25',

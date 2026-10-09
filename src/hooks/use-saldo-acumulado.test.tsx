@@ -14,7 +14,6 @@ const despesas: Despesa[] = [
   {
     id: 'd1',
     tipo: 'despesa',
-    dataEmissao: '2026-10-02',
     descricao: 'Aluguel',
     valor: 3119.5,
     vencimento: '2026-10-10',

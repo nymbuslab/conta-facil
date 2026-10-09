@@ -34,7 +34,6 @@ const valoresPadraoReceita: ReceitaFormValues = {
 }
 
 const valoresPadraoDespesa: DespesaFormValues = {
-  dataEmissao: '',
   descricao: '',
   valor: '',
   vencimento: '',
@@ -78,7 +77,7 @@ function FormularioReceita({ onOpenChange }: { onOpenChange: (open: boolean) => 
             name="dataEmissao"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Data de emissão</FormLabel>
+                <FormLabel>Data de entrada</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
@@ -144,19 +143,6 @@ function FormularioDespesa({ onOpenChange }: { onOpenChange: (open: boolean) => 
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="dataEmissao"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Data de emissão</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           <FormField
             control={form.control}
             name="descricao"

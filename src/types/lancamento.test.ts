@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import { despesaFormSchema } from './lancamento'
 
 const basico = {
-  dataEmissao: '2026-10-05',
   descricao: 'Compra parcelada',
   valor: '1.000,00',
   vencimento: '2026-10-10',

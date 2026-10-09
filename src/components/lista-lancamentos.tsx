@@ -9,11 +9,6 @@ import type { Despesa, Receita } from '@/types/lancamento'
 
 const colunasReceita: ColumnDef<Receita, unknown>[] = [
   {
-    accessorKey: 'dataEmissao',
-    header: 'Emissão',
-    cell: ({ getValue }) => formatarData(getValue<string>()),
-  },
-  {
     accessorKey: 'descricao',
     header: 'Descrição',
   },
@@ -21,7 +16,7 @@ const colunasReceita: ColumnDef<Receita, unknown>[] = [
     accessorKey: 'valor',
     header: 'Valor',
     cell: ({ getValue }) => (
-      <span className="font-display font-medium text-success">
+      <span className="whitespace-nowrap font-display font-medium text-success">
         {formatarMoeda(getValue<number>())}
       </span>
     ),
@@ -31,27 +26,23 @@ const colunasReceita: ColumnDef<Receita, unknown>[] = [
 function criarColunasDespesa(aoSelecionarPendente: (despesa: Despesa) => void): ColumnDef<Despesa, unknown>[] {
   return [
     {
-      accessorKey: 'dataEmissao',
-      header: 'Emissão',
-      cell: ({ getValue }) => formatarData(getValue<string>()),
-    },
-    {
       accessorKey: 'descricao',
       header: 'Descrição',
+      cell: ({ row }) => (
+        <div>
+          <p>{row.original.descricao}</p>
+          <p className="text-xs text-muted-foreground">{formatarData(row.original.vencimento)}</p>
+        </div>
+      ),
     },
     {
       accessorKey: 'valor',
       header: 'Valor',
       cell: ({ getValue }) => (
-        <span className="font-display font-medium text-destructive">
+        <span className="whitespace-nowrap font-display font-medium text-destructive">
           {formatarMoeda(getValue<number>())}
         </span>
       ),
-    },
-    {
-      accessorKey: 'vencimento',
-      header: 'Vencimento',
-      cell: ({ getValue }) => formatarData(getValue<string>()),
     },
     {
       accessorKey: 'paga',

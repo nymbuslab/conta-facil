@@ -52,7 +52,6 @@ function gerarParcelas(
     return {
       id: gerarId(),
       tipo: 'despesa',
-      dataEmissao: dados.dataEmissao,
       descricao: dados.descricao,
       valor: centavosParcela / 100,
       vencimento: adicionarMeses(dados.vencimento, indice),
@@ -109,7 +108,6 @@ export function LancamentosProvider({ children }: { children: ReactNode }) {
       {
         id: gerarId(),
         tipo: 'despesa',
-        dataEmissao: dados.dataEmissao,
         descricao: dados.descricao,
         valor: valorTotal,
         vencimento: dados.vencimento,

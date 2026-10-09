@@ -37,17 +37,15 @@ export const receitaFormSchema = z.object({
   valor: valorFormSchema,
 })
 
-const despesaBaseSchema = receitaFormSchema.extend({
+const despesaBaseSchema = z.object({
+  descricao: z.string().trim().min(1, 'Informe a descrição'),
+  valor: valorFormSchema,
   vencimento: dataSchema,
   parcelado: z.boolean().default(false),
   quantidadeParcelas: z.coerce.number().int().optional(),
 })
 
 export const despesaFormSchema = despesaBaseSchema
-  .refine((dados) => dados.vencimento >= dados.dataEmissao, {
-    message: 'O vencimento não pode ser anterior à emissão',
-    path: ['vencimento'],
-  })
   .refine(
     (dados) =>
       !dados.parcelado ||
@@ -88,7 +86,6 @@ export interface Receita {
 export interface Despesa {
   id: string
   tipo: 'despesa'
-  dataEmissao: string
   descricao: string
   valor: number
   vencimento: string

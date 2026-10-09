@@ -15,7 +15,6 @@ describe('adicionarDespesa — parcelamento', () => {
 
     act(() => {
       result.current.adicionarDespesa({
-        dataEmissao: '2026-10-05',
         descricao: 'Notebook',
         valor: '1.000,00',
         vencimento: '2026-10-10',
@@ -41,12 +40,11 @@ describe('adicionarDespesa — parcelamento', () => {
     expect(Math.round(somaExata * 100) / 100).toBe(1000)
   })
 
-  it('cada parcela vence um mes apos a anterior, com a mesma dataEmissao do grupo', () => {
+  it('cada parcela vence um mes apos a anterior', () => {
     const { result } = montar()
 
     act(() => {
       result.current.adicionarDespesa({
-        dataEmissao: '2026-10-05',
         descricao: 'Sofá',
         valor: '600,00',
         vencimento: '2026-10-10',
@@ -60,7 +58,6 @@ describe('adicionarDespesa — parcelamento', () => {
       .sort((a, b) => (a.parcelaAtual ?? 0) - (b.parcelaAtual ?? 0))
 
     expect(geradas.map((d) => d.vencimento)).toEqual(['2026-10-10', '2026-11-10', '2026-12-10'])
-    expect(geradas.every((d) => d.dataEmissao === '2026-10-05')).toBe(true)
     expect(geradas.map((d) => d.parcelaAtual)).toEqual([1, 2, 3])
     expect(geradas.every((d) => d.totalParcelas === 3)).toBe(true)
   })

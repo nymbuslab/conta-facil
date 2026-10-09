@@ -21,7 +21,6 @@ function Harness() {
       <button
         onClick={() =>
           adicionarDespesa({
-            dataEmissao: '2026-01-10',
             descricao: 'Notebook',
             valor: '1.200,00',
             vencimento: '2026-01-10',
@@ -59,7 +58,6 @@ describe('TelaParcelas — cards de parcelamento', () => {
           <button
             onClick={() =>
               adicionarDespesa({
-                dataEmissao: '2026-01-10',
                 descricao: 'Notebook',
                 valor: '1.200,00',
                 vencimento: '2026-01-10',
