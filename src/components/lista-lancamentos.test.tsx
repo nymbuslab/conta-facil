@@ -15,7 +15,7 @@ describe('ListaLancamentos — marcar despesa como paga', () => {
   it('clicar numa linha de despesa abre o dialogo de confirmacao com a descricao', async () => {
     renderWithProviders(<Harness />)
 
-    fireEvent.click(screen.getByText('Aluguel e condomínio'))
+    fireEvent.click(await screen.findByText('Aluguel e condomínio'))
 
     await waitFor(() => {
       expect(screen.getByText('Deseja marcar como paga?')).toBeInTheDocument()
@@ -26,7 +26,7 @@ describe('ListaLancamentos — marcar despesa como paga', () => {
   it('cancelar fecha o dialogo sem marcar como paga', async () => {
     renderWithProviders(<Harness />)
 
-    fireEvent.click(screen.getByText('Internet fibra'))
+    fireEvent.click(await screen.findByText('Internet fibra'))
     await waitFor(() => expect(screen.getByText('Deseja marcar como paga?')).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
@@ -39,7 +39,7 @@ describe('ListaLancamentos — marcar despesa como paga', () => {
   it('confirmar marca a despesa como paga e fecha o dialogo', async () => {
     renderWithProviders(<Harness />)
 
-    fireEvent.click(screen.getByText('Fatura cartão de crédito'))
+    fireEvent.click(await screen.findByText('Fatura cartão de crédito'))
     await waitFor(() => expect(screen.getByText('Deseja marcar como paga?')).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: 'Marcar como paga' }))

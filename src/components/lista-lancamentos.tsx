@@ -84,11 +84,17 @@ interface ListaLancamentosProps {
 export function ListaLancamentos({ receitas, despesas }: ListaLancamentosProps) {
   const { marcarComoPaga } = useLancamentos()
   const [despesaSelecionada, setDespesaSelecionada] = useState<Despesa | null>(null)
+  const [erroPagamento, setErroPagamento] = useState<string | null>(null)
   const colunasDespesa = useMemo(() => criarColunasDespesa(setDespesaSelecionada), [])
 
-  function confirmarPagamento(id: string) {
-    marcarComoPaga(id)
-    setDespesaSelecionada(null)
+  async function confirmarPagamento(id: string) {
+    setErroPagamento(null)
+    try {
+      await marcarComoPaga(id)
+      setDespesaSelecionada(null)
+    } catch (falha) {
+      setErroPagamento(falha instanceof Error ? falha.message : 'Não foi possível marcar como paga')
+    }
   }
 
   return (
@@ -115,7 +121,11 @@ export function ListaLancamentos({ receitas, despesas }: ListaLancamentosProps) 
 
       <ConfirmarPagamentoDialog
         despesa={despesaSelecionada}
-        onCancelar={() => setDespesaSelecionada(null)}
+        erro={erroPagamento}
+        onCancelar={() => {
+          setDespesaSelecionada(null)
+          setErroPagamento(null)
+        }}
         onConfirmar={confirmarPagamento}
       />
     </div>

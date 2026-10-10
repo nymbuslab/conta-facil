@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { CampoValor } from '@/components/campo-valor'
@@ -27,22 +28,31 @@ const valoresPadrao: CriarCaixinhaFormValues = {
 
 export function NovaCaixinhaModal({ open, onOpenChange }: NovaCaixinhaModalProps) {
   const { criarCaixinha } = useCaixinhas()
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
   const form = useForm<CriarCaixinhaFormValues>({
     resolver: zodResolver(criarCaixinhaSchema),
     defaultValues: valoresPadrao,
   })
 
-  function onSubmit(dados: CriarCaixinhaFormValues) {
-    criarCaixinha(dados)
-    form.reset(valoresPadrao)
-    onOpenChange(false)
+  async function onSubmit(dados: CriarCaixinhaFormValues) {
+    setErroEnvio(null)
+    try {
+      await criarCaixinha(dados)
+      form.reset(valoresPadrao)
+      onOpenChange(false)
+    } catch (falha) {
+      setErroEnvio(falha instanceof Error ? falha.message : 'Não foi possível criar a caixinha')
+    }
   }
 
   return (
     <Dialog
       open={open}
       onOpenChange={(open) => {
-        if (!open) form.reset(valoresPadrao)
+        if (!open) {
+          form.reset(valoresPadrao)
+          setErroEnvio(null)
+        }
         onOpenChange(open)
       }}
     >
@@ -52,6 +62,7 @@ export function NovaCaixinhaModal({ open, onOpenChange }: NovaCaixinhaModalProps
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {erroEnvio && <p className="text-sm text-destructive">{erroEnvio}</p>}
             <FormField
               control={form.control}
               name="nome"

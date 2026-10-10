@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 
 import { CampoValor } from '@/components/campo-valor'
@@ -54,15 +55,21 @@ export function LancamentoModal({ tipo, onOpenChange }: LancamentoModalProps) {
 
 function FormularioReceita({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const { adicionarReceita } = useLancamentos()
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
   const form = useForm<ReceitaFormValues>({
     resolver: zodResolver(receitaFormSchema),
     defaultValues: valoresPadraoReceita,
   })
 
-  function onSubmit(dados: ReceitaFormValues) {
-    adicionarReceita(dados)
-    form.reset(valoresPadraoReceita)
-    onOpenChange(false)
+  async function onSubmit(dados: ReceitaFormValues) {
+    setErroEnvio(null)
+    try {
+      await adicionarReceita(dados)
+      form.reset(valoresPadraoReceita)
+      onOpenChange(false)
+    } catch (falha) {
+      setErroEnvio(falha instanceof Error ? falha.message : 'Não foi possível registrar a receita')
+    }
   }
 
   return (
@@ -72,6 +79,7 @@ function FormularioReceita({ onOpenChange }: { onOpenChange: (open: boolean) => 
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {erroEnvio && <p className="text-sm text-destructive">{erroEnvio}</p>}
           <FormField
             control={form.control}
             name="dataEmissao"
@@ -124,16 +132,22 @@ function FormularioReceita({ onOpenChange }: { onOpenChange: (open: boolean) => 
 
 function FormularioDespesa({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const { adicionarDespesa } = useLancamentos()
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
   const form = useForm<DespesaFormValues>({
     resolver: zodResolver(despesaFormSchema),
     defaultValues: valoresPadraoDespesa,
   })
   const parcelado = useWatch({ control: form.control, name: 'parcelado' })
 
-  function onSubmit(dados: DespesaFormValues) {
-    adicionarDespesa(dados)
-    form.reset(valoresPadraoDespesa)
-    onOpenChange(false)
+  async function onSubmit(dados: DespesaFormValues) {
+    setErroEnvio(null)
+    try {
+      await adicionarDespesa(dados)
+      form.reset(valoresPadraoDespesa)
+      onOpenChange(false)
+    } catch (falha) {
+      setErroEnvio(falha instanceof Error ? falha.message : 'Não foi possível registrar a despesa')
+    }
   }
 
   return (
@@ -143,6 +157,7 @@ function FormularioDespesa({ onOpenChange }: { onOpenChange: (open: boolean) => 
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {erroEnvio && <p className="text-sm text-destructive">{erroEnvio}</p>}
           <FormField
             control={form.control}
             name="descricao"

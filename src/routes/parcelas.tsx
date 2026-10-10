@@ -1,6 +1,7 @@
 import { createRoute } from '@tanstack/react-router'
 
 import { ParcelaCard } from '@/components/parcela-card'
+import { EstadoCarregando, EstadoErro } from '@/components/estado-dados'
 import { agruparParcelamentos } from '@/lib/parcelamento'
 import { useLancamentos } from '@/state/lancamentos-context'
 import { Route as rootRoute } from '@/routes/__root'
@@ -12,7 +13,7 @@ export const Route = createRoute({
 })
 
 export function TelaParcelas() {
-  const { despesas } = useLancamentos()
+  const { despesas, carregando, erro, recarregar } = useLancamentos()
   const grupos = agruparParcelamentos(despesas)
 
   return (
@@ -23,7 +24,11 @@ export function TelaParcelas() {
         </h1>
       </header>
 
-      {grupos.length === 0 ? (
+      {carregando ? (
+        <EstadoCarregando />
+      ) : erro ? (
+        <EstadoErro tentarNovamente={recarregar} />
+      ) : grupos.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
           Nenhuma compra parcelada ainda.
         </p>

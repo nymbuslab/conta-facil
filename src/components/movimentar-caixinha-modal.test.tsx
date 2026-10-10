@@ -31,7 +31,7 @@ describe('MovimentarCaixinhaModal', () => {
   it('submeter deposito soma ao valorGuardado da caixinha', async () => {
     renderWithProviders(<Harness tipo="depositar" />)
 
-    fireEvent.change(screen.getByLabelText('Valor'), { target: { value: '5000' } })
+    fireEvent.change(await screen.findByLabelText('Valor'), { target: { value: '5000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
 
     await waitFor(() => {
@@ -42,7 +42,7 @@ describe('MovimentarCaixinhaModal', () => {
   it('submeter resgate maior que o valor guardado exibe mensagem de erro e nao altera o estado', async () => {
     renderWithProviders(<Harness tipo="resgatar" />)
 
-    fireEvent.change(screen.getByLabelText('Valor'), { target: { value: '100000' } })
+    fireEvent.change(await screen.findByLabelText('Valor'), { target: { value: '100000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
 
     await waitFor(() => {

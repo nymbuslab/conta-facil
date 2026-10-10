@@ -11,12 +11,14 @@ import type { Caixinha } from '@/types/caixinha'
 
 interface ExcluirCaixinhaDialogProps {
   caixinha: Caixinha | null
+  erro?: string | null
   onCancelar: () => void
-  onConfirmar: (id: string) => void
+  onConfirmar: (id: string) => void | Promise<void>
 }
 
 export function ExcluirCaixinhaDialog({
   caixinha,
+  erro,
   onCancelar,
   onConfirmar,
 }: ExcluirCaixinhaDialogProps) {
@@ -42,6 +44,7 @@ export function ExcluirCaixinhaDialog({
             )}
           </p>
         )}
+        {erro && <p className="text-sm text-destructive">{erro}</p>}
         <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" onClick={onCancelar} className="flex-1">
             Cancelar

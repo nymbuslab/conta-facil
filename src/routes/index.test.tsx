@@ -1,6 +1,8 @@
 import { act, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import type { ApiClient } from '@/lib/api-client'
+import { criarClienteLancamentosTeste } from '@/test/api-client-mocks'
 import { renderWithProviders } from '@/test/test-utils'
 import { useCaixinhas } from '@/state/caixinhas-context'
 
@@ -24,6 +26,7 @@ function Harness() {
       >
         depositar 500
       </button>
+      <span data-testid="total-caixinhas">{caixinhas.length}</span>
       <TelaPrincipal />
     </>
   )
@@ -36,6 +39,7 @@ describe('TelaPrincipal — card Guardado e saldo com Caixinhas', () => {
     act(() => {
       getByRole('button', { name: 'criar caixinha' }).click()
     })
+    await waitFor(() => expect(getByText('1', { selector: '[data-testid="total-caixinhas"]' })).toBeInTheDocument())
     act(() => {
       getByRole('button', { name: 'depositar 500' }).click()
     })
@@ -55,6 +59,7 @@ describe('TelaPrincipal — card Guardado e saldo com Caixinhas', () => {
     act(() => {
       getByRole('button', { name: 'criar caixinha' }).click()
     })
+    await waitFor(() => expect(getByText('1', { selector: '[data-testid="total-caixinhas"]' })).toBeInTheDocument())
     act(() => {
       getByRole('button', { name: 'depositar 500' }).click()
     })
@@ -62,5 +67,37 @@ describe('TelaPrincipal — card Guardado e saldo com Caixinhas', () => {
     await waitFor(() => {
       expect(getByText('R$ 2.830,50')).toBeInTheDocument()
     })
+  })
+})
+
+describe('TelaPrincipal - estados remotos', () => {
+  it('mostra carregamento enquanto a consulta inicial nao resolve', () => {
+    const cliente = {
+      ...criarClienteLancamentosTeste(),
+      get: vi.fn(() => new Promise(() => {})),
+    } as unknown as ApiClient
+
+    const { getByRole, queryByText } = renderWithProviders(<TelaPrincipal />, {
+      clienteLancamentos: cliente,
+    })
+
+    expect(getByRole('status', { name: 'Carregando dados' })).toBeInTheDocument()
+    expect(queryByText('Nenhuma receita lançada ainda.')).not.toBeInTheDocument()
+  })
+
+  it('mostra erro e tenta carregar novamente', async () => {
+    const get = vi.fn()
+      .mockRejectedValueOnce(new Error('Function indisponivel'))
+      .mockResolvedValueOnce([])
+    const cliente = { ...criarClienteLancamentosTeste(), get } as unknown as ApiClient
+    const { findByRole, getByRole, findByText } = renderWithProviders(<TelaPrincipal />, {
+      clienteLancamentos: cliente,
+    })
+
+    expect(await findByRole('alert')).toHaveTextContent('Não foi possível carregar seus dados.')
+    getByRole('button', { name: 'Tentar novamente' }).click()
+
+    expect(await findByText('Nenhuma receita lançada ainda.')).toBeInTheDocument()
+    expect(get).toHaveBeenCalledTimes(2)
   })
 })

@@ -1,6 +1,8 @@
 import { act, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import type { ApiClient } from '@/lib/api-client'
+import { criarClienteLancamentosTeste } from '@/test/api-client-mocks'
 import { renderWithProviders } from '@/test/test-utils'
 import { renderRoute } from '@/test/render-route'
 import { useLancamentos } from '@/state/lancamentos-context'
@@ -11,6 +13,21 @@ describe('rota /parcelas', () => {
   it('renderiza o texto Parcelas no documento', async () => {
     const { getByText } = renderRoute('/parcelas')
     await waitFor(() => expect(getByText('Parcelas', { selector: 'h1' })).toBeInTheDocument())
+  })
+})
+
+describe('TelaParcelas - estados remotos', () => {
+  it('nao mostra o vazio antes da consulta terminar', () => {
+    const cliente = {
+      ...criarClienteLancamentosTeste(),
+      get: vi.fn(() => new Promise(() => {})),
+    } as unknown as ApiClient
+    const { getByRole, queryByText } = renderWithProviders(<TelaParcelas />, {
+      clienteLancamentos: cliente,
+    })
+
+    expect(getByRole('status', { name: 'Carregando dados' })).toBeInTheDocument()
+    expect(queryByText('Nenhuma compra parcelada ainda.')).not.toBeInTheDocument()
   })
 })
 

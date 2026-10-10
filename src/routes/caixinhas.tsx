@@ -3,6 +3,7 @@ import { createRoute } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 
 import { CaixinhaCard } from '@/components/caixinha-card'
+import { EstadoCarregando, EstadoErro } from '@/components/estado-dados'
 import { ExcluirCaixinhaDialog } from '@/components/excluir-caixinha-dialog'
 import { MovimentarCaixinhaModal } from '@/components/movimentar-caixinha-modal'
 import { NovaCaixinhaModal } from '@/components/nova-caixinha-modal'
@@ -18,17 +19,23 @@ export const Route = createRoute({
 })
 
 export function TelaCaixinhas() {
-  const { caixinhas, excluirCaixinha } = useCaixinhas()
+  const { caixinhas, excluirCaixinha, carregando, erro, recarregar } = useCaixinhas()
   const [novaCaixinhaAberta, setNovaCaixinhaAberta] = useState(false)
   const [movimentando, setMovimentando] = useState<{
     caixinha: Caixinha
     tipo: 'depositar' | 'resgatar'
   } | null>(null)
   const [excluindo, setExcluindo] = useState<Caixinha | null>(null)
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null)
 
-  function confirmarExclusao(id: string) {
-    excluirCaixinha(id)
-    setExcluindo(null)
+  async function confirmarExclusao(id: string) {
+    setErroExclusao(null)
+    try {
+      await excluirCaixinha(id)
+      setExcluindo(null)
+    } catch (falha) {
+      setErroExclusao(falha instanceof Error ? falha.message : 'Não foi possível excluir a caixinha')
+    }
   }
 
   return (
@@ -37,13 +44,17 @@ export function TelaCaixinhas() {
         <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
           Caixinhas
         </h1>
-        <Button size="sm" onClick={() => setNovaCaixinhaAberta(true)}>
+        <Button size="sm" disabled={carregando || Boolean(erro)} onClick={() => setNovaCaixinhaAberta(true)}>
           <Plus className="size-4" aria-hidden="true" />
           Nova caixinha
         </Button>
       </header>
 
-      {caixinhas.length === 0 ? (
+      {carregando ? (
+        <EstadoCarregando />
+      ) : erro ? (
+        <EstadoErro tentarNovamente={recarregar} />
+      ) : caixinhas.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
           Nenhuma caixinha ainda.
         </p>
@@ -69,7 +80,11 @@ export function TelaCaixinhas() {
       />
       <ExcluirCaixinhaDialog
         caixinha={excluindo}
-        onCancelar={() => setExcluindo(null)}
+        erro={erroExclusao}
+        onCancelar={() => {
+          setExcluindo(null)
+          setErroExclusao(null)
+        }}
         onConfirmar={confirmarExclusao}
       />
     </div>

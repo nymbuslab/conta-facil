@@ -1,7 +1,19 @@
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 
+import { criarApiClient, type ApiClient } from '@/lib/api-client'
 import { parseValorMonetario } from '@/lib/formatters'
 import type { Caixinha, CriarCaixinhaFormValues, MovimentarCaixinhaFormValues } from '@/types/caixinha'
+
+import { useAuth } from './auth-context'
 
 interface ResultadoMovimentacao {
   sucesso: boolean
@@ -11,93 +23,154 @@ interface ResultadoMovimentacao {
 interface CaixinhasContextValue {
   caixinhas: Caixinha[]
   totalGuardado: number
-  criarCaixinha: (dados: CriarCaixinhaFormValues) => void
-  depositar: (id: string, dados: MovimentarCaixinhaFormValues) => ResultadoMovimentacao
-  resgatar: (id: string, dados: MovimentarCaixinhaFormValues) => ResultadoMovimentacao
-  excluirCaixinha: (id: string) => void
+  carregando: boolean
+  erro: string | null
+  recarregar: () => Promise<void>
+  criarCaixinha: (dados: CriarCaixinhaFormValues) => Promise<void>
+  depositar: (id: string, dados: MovimentarCaixinhaFormValues) => Promise<ResultadoMovimentacao>
+  resgatar: (id: string, dados: MovimentarCaixinhaFormValues) => Promise<ResultadoMovimentacao>
+  excluirCaixinha: (id: string) => Promise<void>
+}
+
+type CaixinhaApi = {
+  id: string
+  nome: string
+  valorGuardado: number
+  meta: number
 }
 
 const CaixinhasContext = createContext<CaixinhasContextValue | null>(null)
-
-function gerarId() {
-  return Math.random().toString(36).slice(2, 10)
-}
 
 function arredondar(valor: number) {
   return Math.round(valor * 100) / 100
 }
 
-export function CaixinhasProvider({ children }: { children: ReactNode }) {
-  const [caixinhas, setCaixinhas] = useState<Caixinha[]>([])
-
-  /** Espelha o estado mais recente de forma síncrona: o setter do useState não garante que o
-   * updater funcional já tenha corrido quando a função que o chamou retorna, então validar e
-   * mutar através desta ref — sempre atualizada aqui, nunca durante a renderização — é o que
-   * torna duas chamadas no mesmo evento (ex: duplo clique) realmente atômicas entre si. */
-  const caixinhasRef = useRef(caixinhas)
-
-  function aplicarAtualizacao(atualizador: (atual: Caixinha[]) => Caixinha[]) {
-    const proximo = atualizador(caixinhasRef.current)
-    caixinhasRef.current = proximo
-    setCaixinhas(proximo)
+function paraCaixinha(item: CaixinhaApi): Caixinha {
+  return {
+    id: item.id,
+    nome: item.nome,
+    valorGuardado: item.valorGuardado / 100,
+    meta: item.meta / 100,
   }
+}
+
+function mensagemErro(falha: unknown) {
+  return falha instanceof Error ? falha.message : 'Nao foi possivel carregar as caixinhas'
+}
+
+export function CaixinhasProvider({
+  children,
+  cliente,
+}: {
+  children: ReactNode
+  cliente?: ApiClient
+}) {
+  const { obterToken, status, usuario } = useAuth()
+  const clienteAtual = useMemo(
+    () => cliente ?? criarApiClient({
+      baseUrl: import.meta.env.VITE_NEON_FUNCTION_API_BASE_URL ?? '',
+      obterToken,
+    }),
+    [cliente, obterToken],
+  )
+  const [caixinhas, setCaixinhas] = useState<Caixinha[]>([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
+
+  /** Descarta respostas de uma sessao/usuario que ja nao e o atual: ver mesma nota em
+   * lancamentos-context.tsx. */
+  const geracaoAtualRef = useRef(0)
+
+  const recarregar = useCallback(async () => {
+    const minhaGeracao = ++geracaoAtualRef.current
+    setCarregando(true)
+    setErro(null)
+    setCaixinhas([])
+    try {
+      const dados = await clienteAtual.get<CaixinhaApi[]>('/caixinhas')
+      if (geracaoAtualRef.current !== minhaGeracao) return
+      setCaixinhas(dados.map(paraCaixinha))
+    } catch (falha) {
+      if (geracaoAtualRef.current !== minhaGeracao) return
+      setErro(mensagemErro(falha))
+    } finally {
+      if (geracaoAtualRef.current === minhaGeracao) setCarregando(false)
+    }
+  }, [clienteAtual])
+
+  useEffect(() => {
+    if (status !== 'autenticado') {
+      geracaoAtualRef.current += 1
+      setCaixinhas([])
+      setErro(null)
+      setCarregando(status === 'carregando')
+      return
+    }
+    void recarregar()
+  }, [recarregar, status, usuario?.id])
 
   const totalGuardado = useMemo(
-    () => arredondar(caixinhas.reduce((soma, c) => soma + c.valorGuardado, 0)),
+    () => arredondar(caixinhas.reduce((soma, item) => soma + item.valorGuardado, 0)),
     [caixinhas],
   )
 
-  function criarCaixinha(dados: CriarCaixinhaFormValues) {
+  async function criarCaixinha(dados: CriarCaixinhaFormValues) {
     const meta = parseValorMonetario(dados.meta)
     if (meta === null) return
-
-    aplicarAtualizacao((atual) => [
-      ...atual,
-      { id: gerarId(), nome: dados.nome, valorGuardado: 0, meta },
-    ])
+    const criada = await clienteAtual.post<CaixinhaApi>('/caixinhas', {
+      nome: dados.nome,
+      meta: Math.round(meta * 100),
+    })
+    setCaixinhas((atuais) => [...atuais, paraCaixinha(criada)])
   }
 
-  function depositar(id: string, dados: MovimentarCaixinhaFormValues): ResultadoMovimentacao {
+  async function movimentar(
+    id: string,
+    dados: MovimentarCaixinhaFormValues,
+    tipo: 'depositar' | 'resgatar',
+  ): Promise<ResultadoMovimentacao> {
     const valor = parseValorMonetario(dados.valor)
-    if (valor === null) return { sucesso: false, erro: 'Informe um valor válido' }
-
-    const caixinha = caixinhasRef.current.find((c) => c.id === id)
-    if (!caixinha) return { sucesso: false, erro: 'Caixinha não encontrada' }
-
-    aplicarAtualizacao((atual) =>
-      atual.map((c) =>
-        c.id === id ? { ...c, valorGuardado: arredondar(c.valorGuardado + valor) } : c,
-      ),
-    )
-    return { sucesso: true }
-  }
-
-  function resgatar(id: string, dados: MovimentarCaixinhaFormValues): ResultadoMovimentacao {
-    const valor = parseValorMonetario(dados.valor)
-    if (valor === null) return { sucesso: false, erro: 'Informe um valor válido' }
-
-    const caixinha = caixinhasRef.current.find((c) => c.id === id)
-    if (!caixinha) return { sucesso: false, erro: 'Caixinha não encontrada' }
-    if (valor > caixinha.valorGuardado) {
-      return { sucesso: false, erro: 'Valor maior que o guardado nesta caixinha' }
+    if (valor === null) return { sucesso: false, erro: 'Informe um valor valido' }
+    try {
+      const atualizada = await clienteAtual.post<CaixinhaApi>(`/caixinhas/${id}/${tipo}`, {
+        valor: Math.round(valor * 100),
+      })
+      const caixinha = paraCaixinha(atualizada)
+      setCaixinhas((atuais) => atuais.map((item) => item.id === id ? caixinha : item))
+      return { sucesso: true }
+    } catch (falha) {
+      // Erro de mutacao fica so no resultado devolvido ao modal: setErro aqui tomaria o
+      // mesmo estado da falha de CARREGAMENTO da pagina e trocaria a lista inteira por
+      // EstadoErro mesmo num caso esperado como saldo insuficiente.
+      return { sucesso: false, erro: mensagemErro(falha) }
     }
-
-    aplicarAtualizacao((atual) =>
-      atual.map((c) =>
-        c.id === id ? { ...c, valorGuardado: arredondar(c.valorGuardado - valor) } : c,
-      ),
-    )
-    return { sucesso: true }
   }
 
-  function excluirCaixinha(id: string) {
-    aplicarAtualizacao((atual) => atual.filter((c) => c.id !== id))
+  function depositar(id: string, dados: MovimentarCaixinhaFormValues) {
+    return movimentar(id, dados, 'depositar')
+  }
+
+  function resgatar(id: string, dados: MovimentarCaixinhaFormValues) {
+    return movimentar(id, dados, 'resgatar')
+  }
+
+  async function excluirCaixinha(id: string) {
+    await clienteAtual.delete(`/caixinhas/${id}`)
+    setCaixinhas((atuais) => atuais.filter((item) => item.id !== id))
   }
 
   return (
-    <CaixinhasContext.Provider
-      value={{ caixinhas, totalGuardado, criarCaixinha, depositar, resgatar, excluirCaixinha }}
-    >
+    <CaixinhasContext.Provider value={{
+      caixinhas,
+      totalGuardado,
+      carregando,
+      erro,
+      recarregar,
+      criarCaixinha,
+      depositar,
+      resgatar,
+      excluirCaixinha,
+    }}>
       {children}
     </CaixinhasContext.Provider>
   )
@@ -105,8 +178,6 @@ export function CaixinhasProvider({ children }: { children: ReactNode }) {
 
 export function useCaixinhas() {
   const context = useContext(CaixinhasContext)
-  if (!context) {
-    throw new Error('useCaixinhas deve ser usado dentro de CaixinhasProvider')
-  }
+  if (!context) throw new Error('useCaixinhas deve ser usado dentro de CaixinhasProvider')
   return context
 }

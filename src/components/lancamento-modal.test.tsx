@@ -48,7 +48,7 @@ describe('LancamentoModal — Despesa parcelada', () => {
   it('submeter com parcelado marcado e quantidade 3 gera 3 despesas no estado', async () => {
     renderWithProviders(<HarnessComContador />)
 
-    expect(screen.getByTestId('total-despesas')).toHaveTextContent('3')
+    await waitFor(() => expect(screen.getByTestId('total-despesas')).toHaveTextContent('3'))
 
     fireEvent.change(screen.getByLabelText('Descrição'), {
       target: { value: 'Notebook' },

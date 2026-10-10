@@ -35,10 +35,10 @@ export function MovimentarCaixinhaModal({ caixinha, tipo, onOpenChange }: Movime
     defaultValues: valoresPadrao,
   })
 
-  function onSubmit(dados: MovimentarCaixinhaFormValues) {
+  async function onSubmit(dados: MovimentarCaixinhaFormValues) {
     if (!caixinha) return
     const acao = tipo === 'depositar' ? depositar : resgatar
-    const resultado = acao(caixinha.id, dados)
+    const resultado = await acao(caixinha.id, dados)
 
     if (!resultado.sucesso) {
       setErro(resultado.erro ?? 'Não foi possível concluir a operação')

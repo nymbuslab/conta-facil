@@ -1,75 +1,95 @@
-import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 
+import { ApiError, type ApiClient } from '@/lib/api-client'
+import { criarClienteAuthTeste } from '@/test/test-utils'
+
+import { AuthProvider } from './auth-context'
 import { CaixinhasProvider, useCaixinhas } from './caixinhas-context'
 
-function montar() {
+function criarCliente(overrides: Partial<ApiClient> = {}) {
+  return {
+    get: vi.fn().mockResolvedValue([]),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+    ...overrides,
+  } as unknown as ApiClient
+}
+
+function montar(cliente: ApiClient) {
   return renderHook(() => useCaixinhas(), {
-    wrapper: ({ children }) => <CaixinhasProvider>{children}</CaixinhasProvider>,
+    wrapper: ({ children }) => (
+      <AuthProvider cliente={criarClienteAuthTeste()}>
+        <CaixinhasProvider cliente={cliente}>{children}</CaixinhasProvider>
+      </AuthProvider>
+    ),
   })
 }
 
 describe('CaixinhasProvider', () => {
-  it('criar uma caixinha e depositar reflete no valorGuardado dela e no totalGuardado agregado', () => {
-    const { result } = montar()
-
-    act(() => {
-      result.current.criarCaixinha({ nome: 'Viagem', meta: '6.000,00' })
-    })
-    const caixinha = result.current.caixinhas[0]
-    expect(caixinha.nome).toBe('Viagem')
-    expect(caixinha.valorGuardado).toBe(0)
-
-    act(() => {
-      result.current.depositar(caixinha.id, { valor: '2.400,00' })
+  it('carrega caixinhas da Function e converte centavos para reais', async () => {
+    const cliente = criarCliente({
+      get: vi.fn().mockResolvedValue([
+        { id: 'caixinha-1', nome: 'Viagem', valorGuardado: 240000, meta: 600000 },
+      ]),
     })
 
-    expect(result.current.caixinhas[0].valorGuardado).toBe(2400)
+    const { result } = montar(cliente)
+
+    expect(result.current.carregando).toBe(true)
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+    expect(result.current.caixinhas[0]).toMatchObject({
+      nome: 'Viagem', valorGuardado: 2400, meta: 6000,
+    })
     expect(result.current.totalGuardado).toBe(2400)
   })
 
-  it('resgatar um valor maior que o guardado nao altera o estado e sinaliza erro', () => {
-    const { result } = montar()
+  it('cria e deposita usando a resposta persistida da Function', async () => {
+    const post = vi.fn()
+      .mockResolvedValueOnce({ id: 'caixinha-1', nome: 'Viagem', valorGuardado: 0, meta: 600000 })
+      .mockResolvedValueOnce({ id: 'caixinha-1', nome: 'Viagem', valorGuardado: 240000, meta: 600000 })
+    const { result } = montar(criarCliente({ post }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
 
-    act(() => {
-      result.current.criarCaixinha({ nome: 'Reserva', meta: '1.000,00' })
+    await act(async () => result.current.criarCaixinha({ nome: 'Viagem', meta: '6.000,00' }))
+    await act(async () => result.current.depositar('caixinha-1', { valor: '2.400,00' }))
+
+    expect(post).toHaveBeenNthCalledWith(1, '/caixinhas', { nome: 'Viagem', meta: 600000 })
+    expect(post).toHaveBeenNthCalledWith(2, '/caixinhas/caixinha-1/depositar', { valor: 240000 })
+    expect(result.current.caixinhas[0].valorGuardado).toBe(2400)
+  })
+
+  it('saldo insuficiente devolve sucesso false sem alterar as caixinhas', async () => {
+    const post = vi.fn().mockRejectedValue(new ApiError(400, 'Saldo insuficiente'))
+    const cliente = criarCliente({
+      get: vi.fn().mockResolvedValue([
+        { id: 'reserva-1', nome: 'Reserva', valorGuardado: 10000, meta: 100000 },
+      ]),
+      post,
     })
-    const caixinha = result.current.caixinhas[0]
+    const { result } = montar(cliente)
+    await waitFor(() => expect(result.current.carregando).toBe(false))
 
-    act(() => {
-      result.current.depositar(caixinha.id, { valor: '100,00' })
+    let resposta: { sucesso: boolean; erro?: string } | undefined
+    await act(async () => {
+      resposta = await result.current.resgatar('reserva-1', { valor: '200,00' })
     })
 
-    let resultado: { sucesso: boolean; erro?: string } | undefined
-    act(() => {
-      resultado = result.current.resgatar(caixinha.id, { valor: '200,00' })
-    })
-
-    expect(resultado?.sucesso).toBe(false)
-    expect(resultado?.erro).toBeTruthy()
+    expect(resposta).toEqual({ sucesso: false, erro: 'Saldo insuficiente' })
     expect(result.current.caixinhas[0].valorGuardado).toBe(100)
   })
 
-  it('excluir uma caixinha remove ela da lista e reduz totalGuardado pelo valor que ela tinha', () => {
-    const { result } = montar()
+  it('expoe erro de rede e recarrega sem manter dados antigos', async () => {
+    const get = vi.fn()
+      .mockRejectedValueOnce(new Error('Function indisponivel'))
+      .mockResolvedValueOnce([])
+    const { result } = montar(criarCliente({ get }))
 
-    act(() => {
-      result.current.criarCaixinha({ nome: 'Viagem', meta: '6.000,00' })
-      result.current.criarCaixinha({ nome: 'Carro', meta: '20.000,00' })
-    })
-    const [viagem, carro] = result.current.caixinhas
+    await waitFor(() => expect(result.current.erro).toBe('Function indisponivel'))
+    await act(async () => result.current.recarregar())
 
-    act(() => {
-      result.current.depositar(viagem.id, { valor: '1.000,00' })
-      result.current.depositar(carro.id, { valor: '500,00' })
-    })
-    expect(result.current.totalGuardado).toBe(1500)
-
-    act(() => {
-      result.current.excluirCaixinha(viagem.id)
-    })
-
-    expect(result.current.caixinhas.find((c) => c.id === viagem.id)).toBeUndefined()
-    expect(result.current.totalGuardado).toBe(500)
+    expect(result.current.erro).toBeNull()
+    expect(result.current.caixinhas).toEqual([])
   })
 })

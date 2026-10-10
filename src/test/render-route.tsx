@@ -2,11 +2,28 @@ import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/rea
 import { render } from '@testing-library/react'
 
 import { routeTree } from '@/router'
+import type { ApiClient } from '@/lib/api-client'
+import { criarClienteCaixinhasTeste, criarClienteLancamentosTeste } from '@/test/api-client-mocks'
+import { criarClienteAuthTeste, usuarioTestePadrao } from '@/test/test-utils'
 
-export function renderRoute(path: string) {
+export function renderRoute(
+  path: string,
+  opcoes: {
+    usuario?: typeof usuarioTestePadrao | null
+    clienteLancamentos?: ApiClient
+    clienteCaixinhas?: ApiClient
+  } = {},
+) {
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [path] }),
+    context: {
+      clienteAuth: criarClienteAuthTeste(
+        opcoes.usuario === undefined ? usuarioTestePadrao : opcoes.usuario,
+      ),
+      clienteLancamentos: opcoes.clienteLancamentos ?? criarClienteLancamentosTeste(),
+      clienteCaixinhas: opcoes.clienteCaixinhas ?? criarClienteCaixinhasTeste(),
+    },
   })
 
   const utils = render(<RouterProvider router={router} />)

@@ -34,3 +34,4 @@ dist-ssr
 # sprintx — rastro local e estado da barra de status
 docs/eventos/
 .expx/estado.json
+.neon

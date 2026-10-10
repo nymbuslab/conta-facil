@@ -11,12 +11,14 @@ import type { Despesa } from '@/types/lancamento'
 
 interface ConfirmarPagamentoDialogProps {
   despesa: Despesa | null
+  erro?: string | null
   onCancelar: () => void
   onConfirmar: (id: string) => void
 }
 
 export function ConfirmarPagamentoDialog({
   despesa,
+  erro,
   onCancelar,
   onConfirmar,
 }: ConfirmarPagamentoDialogProps) {
@@ -34,6 +36,7 @@ export function ConfirmarPagamentoDialog({
             </p>
           </div>
         )}
+        {erro && <p className="text-sm text-destructive">{erro}</p>}
         <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" onClick={onCancelar} className="flex-1">
             Cancelar
