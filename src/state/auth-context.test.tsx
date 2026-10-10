@@ -81,6 +81,41 @@ describe('AuthProvider', () => {
     expect(obterToken).toHaveBeenCalledOnce()
   })
 
+  it('extrai o token do formato { data: { token } }', async () => {
+    const { cliente } = criarClienteAuth()
+    cliente.token = vi.fn().mockResolvedValue({ data: { token: 'token-direto' }, error: null })
+    cliente.useSession = () => ({
+      data: { user: { id: 'usuario-1', name: 'Ana', email: 'ana@exemplo.com' }, session: {} },
+      error: null,
+      isPending: false,
+    })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <AuthProvider cliente={cliente}>{children}</AuthProvider>
+    )
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await expect(result.current.obterToken()).resolves.toBe('token-direto')
+  })
+
+  it('extrai o token do formato { data: { session: { token } } } (shape real do adapter)', async () => {
+    const { cliente } = criarClienteAuth()
+    cliente.token = vi.fn().mockResolvedValue({
+      data: { session: { token: 'token-da-sessao' }, user: {} },
+      error: null,
+    })
+    cliente.useSession = () => ({
+      data: { user: { id: 'usuario-1', name: 'Ana', email: 'ana@exemplo.com' }, session: {} },
+      error: null,
+      isPending: false,
+    })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <AuthProvider cliente={cliente}>{children}</AuthProvider>
+    )
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await expect(result.current.obterToken()).resolves.toBe('token-da-sessao')
+  })
+
   it('lanca erro quando useAuth e usado fora do provider', () => {
     expect(() => renderHook(() => useAuth())).toThrow(
       'useAuth deve ser usado dentro de AuthProvider',

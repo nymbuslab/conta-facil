@@ -24,7 +24,7 @@ export function SaldoCard({ titulo, valor }: SaldoCardProps) {
         <Icone className={`size-3.5 shrink-0 ${cor}`} aria-hidden="true" />
       </CardHeader>
       <CardContent className="p-3 pt-0">
-        <p className={`truncate font-display text-base font-semibold sm:text-xl ${cor}`}>
+        <p className={`break-words font-display text-sm font-semibold sm:text-xl ${cor}`}>
           {formatarMoeda(valor)}
         </p>
       </CardContent>

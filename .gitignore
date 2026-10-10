@@ -35,3 +35,4 @@ dist-ssr
 docs/eventos/
 .expx/estado.json
 .neon
+.playwright-mcp/

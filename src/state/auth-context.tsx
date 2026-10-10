@@ -72,9 +72,20 @@ function extrairToken(resultado: unknown) {
   if (!resultado || typeof resultado !== 'object') return null
 
   const data = 'data' in resultado ? resultado.data : null
-  if (!data || typeof data !== 'object' || !('token' in data)) return null
+  if (!data || typeof data !== 'object') return null
 
-  return typeof data.token === 'string' ? data.token : null
+  // Cliente padrao: { data: { token } }.
+  if ('token' in data && typeof data.token === 'string') {
+    return data.token
+  }
+
+  // Formato observado em runtime do adapter atual: { data: { session: { token }, user } },
+  // o mesmo shape documentado para SupabaseAuthAdapter() (getSession().data.session.access_token).
+  if ('session' in data && data.session && typeof data.session === 'object' && 'token' in data.session) {
+    return typeof data.session.token === 'string' ? data.session.token : null
+  }
+
+  return null
 }
 
 export function AuthProvider({
