@@ -2,6 +2,17 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-11 — Conta Fácil no ar
+
+- O app está em produção em `https://contafacil.nymbuslab.com.br`, com os mesmos dados reais e
+  contas de usuário de antes, agora servidos pelo ambiente final.
+
+## 2026-10-10 — Correção: dados não carregavam após o login
+
+- Corrigido um bug que fazia o app mostrar "Não foi possível carregar seus dados" para todo
+  mundo logo após entrar ou criar conta — login funcionava, mas nada aparecia.
+- Corrigido o valor cortado no card de Despesa da tela Início, no celular.
+
 ## 2026-10-10 — Contas reais e dados persistidos
 
 - Login e cadastro agora usam Neon Managed Auth; o perfil mostra a conta autenticada.

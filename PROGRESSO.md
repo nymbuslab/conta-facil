@@ -8,14 +8,11 @@ _(nada no momento)_
 
 ## 📋 Próximos Passos
 
-- [ ] (P1) Commitar `.gitignore`, `package.json`/`package-lock.json`, `CLAUDE.md`, `neon.ts`,
-  `.claude/` e `skills-lock.json` (hoje modificados/não versionados no working tree)
-- [ ] (P0) Planejar e aprovar o rollout da integração Neon em `production`, com migration,
-  Function, Auth, variáveis do frontend, validação pós-deploy e rollback; até aqui a implantação
-  foi feita somente na branch `test`
-- [ ] (P1) Validar visualmente o golden path autenticado em desktop e mobile quando a extensão do
-  Chrome deixar de bloquear a automação; login e testes automatizados foram validados nesta entrega
-- [ ] (P1) Revisar os alertas do `npm audit` e atualizar dependências sem quebra antes do rollout
+- [ ] (P1) Revisar os alertas do `npm audit` e atualizar dependências sem quebra
+- [ ] (P2) Confirmar com a documentação oficial do Neon Auth (ou suporte) se `data.session.token`
+  é o formato oficial do `.token()` do adapter atual, ou se há versão mais nova que devolve
+  `data.token` direto — `extrairToken` (`src/state/auth-context.tsx`) hoje aceita os dois por
+  segurança, mas a doc da skill (`base/neon-auth.md`) documentava só `data.token`
 - [ ] (P1) Idempotência de escrita financeira: `POST /lancamentos` e `/caixinhas/:id/depositar|resgatar`
   não têm chave de idempotência — uma resposta perdida e repetida pelo cliente pode duplicar
   lançamento ou aplicar o depósito/resgate duas vezes (achado do cross-review de 2026-10-10,
@@ -27,6 +24,18 @@ _(nada no momento)_
 
 ## ✅ Concluído
 
+- [x] Rollout para `production`: migration aplicada (`lancamentos`/`caixinhas`), Function `api`
+  implantada com CORS liberado para `contafacil.nymbuslab.com.br`, frontend publicado no
+  Cloudflare Pages com o domínio final no ar, e golden path real validado de ponta a ponta
+  (cadastro, login, despesa, receita, caixinha, reload) — 2026-10-11 (ver `FECHAMENTO.md` de
+  `rollout-neon-production`; domínio confiável do Neon Auth precisou ser registrado manualmente,
+  achado durante a validação)
+- [x] Deploy contínuo do frontend: projeto Cloudflare Pages conectado ao GitHub
+  (`nymbuslab/conta-facil`, branch `master`) — todo push dispara build e deploy automático, sem
+  precisar de `wrangler pages deploy` manual. `NODE_VERSION=24` fixado nas env vars de build
+  (produção e preview) porque o `npm 10.9.2` do ambiente padrão do Cloudflare tem um bug conhecido
+  no resolvedor de dependências que travava o build (`Cannot read properties of null
+  (reading 'edgesOut')`) — 2026-10-11
 - [x] Navegação inferior (Início, Parcelas, Caixinhas, Perfil), parcelamento de despesas e
   Caixinhas com meta descontando do saldo acumulado — 2026-10-08
 - [x] Integração Neon concluída: Auth real, Function autenticada, Postgres para lançamentos e
@@ -39,3 +48,9 @@ _(nada no momento)_
   mascarando erro de rota, CORS sem allowlist, mutação sem tratamento de erro fechando
   modal como se tivesse dado certo, resgate ambíguo) e médios (parcelas, UUID/JSON, migration
   pooled) — 2026-10-10 (build, lint e 86 testes OK)
+- [x] Validação visual do golden path autenticado (desktop e mobile, via Playwright): cadastro,
+  login, erro de senha, logout, lançamento de despesa, criação de caixinha e tela de perfil
+  testados de ponta a ponta na branch `test`. Achou e corrigiu 2 bugs reais que a revisão
+  estática (cross-review) não pegava: extração do token de auth quebrava toda a carga de dados
+  após o login (formato real `data.session.token`, não `data.token`), e valor cortado no card
+  de Despesa no mobile — 2026-10-10

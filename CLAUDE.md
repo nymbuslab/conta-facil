@@ -77,6 +77,12 @@ listar — "Guardado" (caixinhas) é saldo corrido, não entra nesse filtro.
   remontados com `key={usuario?.id}` em `__root.tsx` (`ProvedoresDeDados`) a cada troca de
   sessão — sem isso, uma resposta tardia da sessão anterior poderia aparecer nos dados do
   usuário que entrou depois.
+- **Domínio confiável do Neon Auth**: toda branch nova precisa ter o domínio do frontend
+  registrado via `add_auth_trusted_domain` (MCP do Neon) ou no console — sem isso, `sign-up`/
+  `sign-in` tomam `403` mesmo com CORS da Function liberado, porque é uma allowlist separada do
+  `FUNCTION_ALLOWED_ORIGINS`. Faltou nesse passo no rollout de `production`
+  (`docs/sprintx/features/rollout-neon-production/00-BLOQUEIOS.md`, B-05) e só apareceu ao testar
+  o golden path real.
 
 ## Env vars
 
@@ -89,10 +95,24 @@ Preenchidas por `neon link` em `.env.local` (nunca versionado — `.gitignore` c
 | `NEON_FUNCTION_API_BASE_URL` | URL pública da Function `api`, exposta ao Vite como `VITE_NEON_FUNCTION_API_BASE_URL` |
 | `FUNCTION_ALLOWED_ORIGINS` | Origens liberadas no CORS da Function (lista separada por vírgula) — declarada em `neon.ts`, obrigatória no deploy |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_ENDPOINT_URL_S3` / `AWS_REGION` | Object Storage (bucket `documentos`, privado) |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` | Autenticação do `wrangler` contra a conta Cloudflare, usadas para publicar o frontend no Cloudflare Pages |
 
 Configuração declarativa em `neon.ts` (`auth: true`, bucket `documentos` privado), aplicada com
-`neon deploy`. Projeto Neon: `conta-facil` (`falling-tree-35553185`). Schema, Auth e Function
-foram validados na branch `test`; promoção para `production` é uma etapa separada.
+`neon deploy`. Projeto Neon: `conta-facil` (`falling-tree-35553185`). A aplicação está em
+produção: branch `production` (`br-rapid-night-b4f7w7vu`) com schema de negócio, Function `api`
+e Auth; frontend publicado no Cloudflare Pages (projeto `conta-facil`) no domínio
+`https://contafacil.nymbuslab.com.br`. Decisões e histórico do rollout em
+`docs/sprintx/features/rollout-neon-production/`.
+
+- **Deploy do frontend**: o projeto Cloudflare Pages está conectado ao GitHub
+  (`nymbuslab/conta-facil`, branch de produção `master`) — todo push em `master` builda e publica
+  sozinho, sem precisar rodar `wrangler pages deploy` na mão. O ambiente padrão de build do
+  Cloudflare detecta `npm 10.9.2`, que tem um bug conhecido no resolvedor de dependências
+  (`Cannot read properties of null (reading 'edgesOut')`) e quebra o `npm clean-install` neste
+  projeto por causa das cadeias de override de peer dependency do `@neondatabase/auth` — por isso
+  `NODE_VERSION=24` está fixado nas env vars de build (produção e preview) do projeto Pages, pra
+  trazer um `npm` mais novo junto. Se o build do Pages voltar a falhar com esse erro depois de uma
+  atualização do Node, é o primeiro lugar pra olhar.
 
 ## Skills do projeto
 

@@ -48,5 +48,7 @@ O schema está em `src/db/schema.ts`, a migration em `drizzle/` e as rotas da Fu
 
 ## Estado da entrega
 
-A integração foi validada na branch Neon `test`, inclusive com a Function implantada. A promoção
-para produção permanece separada e exige plano de rollout e rollback aprovado.
+Em produção: `https://contafacil.nymbuslab.com.br`. A branch Neon `production` tem o schema de
+negócio e a Function `api` implantados, o frontend é publicado no Cloudflare Pages, e o golden
+path autenticado foi validado de ponta a ponta contra o domínio real. O procedimento de rollback
+por Instant Restore está documentado em `docs/sprintx/features/rollout-neon-production/ROLLBACK.md`.
