@@ -113,6 +113,13 @@ e Auth; frontend publicado no Cloudflare Pages (projeto `conta-facil`) no domín
   `NODE_VERSION=24` está fixado nas env vars de build (produção e preview) do projeto Pages, pra
   trazer um `npm` mais novo junto. Se o build do Pages voltar a falhar com esse erro depois de uma
   atualização do Node, é o primeiro lugar pra olhar.
+- **Env vars de build do Cloudflare Pages**: `VITE_NEON_FUNCTION_API_BASE_URL` e
+  `VITE_NEON_AUTH_BASE_URL` são obrigatórias nas env vars de build (produção e preview) do projeto
+  Pages — sem a segunda, `auth-context.tsx` lança `VITE_NEON_AUTH_BASE_URL nao definida` e a tela
+  fica em branco (faltou na primeira conexão com o GitHub, só apareceu ao recarregar a página já
+  em produção). Se a Function ou o Auth mudarem de URL (troca de branch, recriação do projeto
+  Neon), as duas precisam ser atualizadas juntas no painel do Cloudflare Pages ou via API
+  (`PATCH /accounts/{id}/pages/projects/conta-facil`, campo `deployment_configs.*.env_vars`).
 
 ## Skills do projeto
 
