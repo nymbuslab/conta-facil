@@ -50,14 +50,14 @@ describe('rotas de lancamentos', () => {
     expect(repositorio.listar).toHaveBeenCalledWith('usuario-1')
   })
 
-  it('divide uma despesa parcelada em N linhas com o mesmo parcelamentoId', async () => {
+  it('multiplica o valor da parcela em N linhas com o mesmo parcelamentoId', async () => {
     const resposta = await criarApp(repositorio).request('/lancamentos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         tipo: 'despesa',
         descricao: 'Notebook',
-        valor: 10001,
+        valor: 3334,
         vencimento: '2026-10-15',
         parcelado: true,
         quantidadeParcelas: 3,
@@ -68,7 +68,7 @@ describe('rotas de lancamentos', () => {
     const [parcelas] = vi.mocked(repositorio.criarMuitos).mock.calls[0]
     expect(parcelas).toHaveLength(3)
     expect(new Set(parcelas.map((parcela) => parcela.parcelamentoId)).size).toBe(1)
-    expect(parcelas.map((parcela) => parcela.valor)).toEqual([3333, 3333, 3335])
+    expect(parcelas.map((parcela) => parcela.valor)).toEqual([3334, 3334, 3334])
     expect(parcelas.map((parcela) => parcela.vencimento)).toEqual([
       '2026-10-15',
       '2026-11-15',

@@ -45,30 +45,17 @@ const despesaBaseSchema = z.object({
   quantidadeParcelas: z.coerce.number().int().optional(),
 })
 
-export const despesaFormSchema = despesaBaseSchema
-  .refine(
-    (dados) =>
-      !dados.parcelado ||
-      (dados.quantidadeParcelas !== undefined &&
-        dados.quantidadeParcelas >= 2 &&
-        dados.quantidadeParcelas <= 360),
-    {
-      message: 'Informe a quantidade de parcelas entre 2 e 360',
-      path: ['quantidadeParcelas'],
-    },
-  )
-  .refine(
-    (dados) => {
-      if (!dados.parcelado || !dados.quantidadeParcelas) return true
-      const valor = parseValorMonetario(dados.valor)
-      if (valor === null) return true
-      return Math.round(valor * 100) >= dados.quantidadeParcelas
-    },
-    {
-      message: 'O valor total não é suficiente para dividir nessa quantidade de parcelas',
-      path: ['quantidadeParcelas'],
-    },
-  )
+export const despesaFormSchema = despesaBaseSchema.refine(
+  (dados) =>
+    !dados.parcelado ||
+    (dados.quantidadeParcelas !== undefined &&
+      dados.quantidadeParcelas >= 2 &&
+      dados.quantidadeParcelas <= 360),
+  {
+    message: 'Informe a quantidade de parcelas entre 2 e 360',
+    path: ['quantidadeParcelas'],
+  },
+)
 
 /** Valores crus do formulário: `valor` ainda é texto livre (ex: "1.234,56"), convertido para
  * número só ao salvar o lançamento — ver `parseValorMonetario` em `@/lib/formatters`. */

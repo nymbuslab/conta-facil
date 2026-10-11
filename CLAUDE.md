@@ -50,8 +50,10 @@ listar — "Guardado" (caixinhas) é saldo corrido, não entra nesse filtro.
   modelo antigo tinha os dois campos e uma regra de validação cruzada que foi removida.
 - **Mês vigente** definido por `ehMesVigente` (`src/lib/datas.ts`), comparando ano/mês da data
   contra `new Date()` do ambiente — não há seletor de mês na UI ainda.
-- **Parcelamento**: a Function distribui o valor total em centavos, dando o resto à última
-  parcela; o schema zod do formulário bloqueia parcelar com menos de 1 centavo por parcela.
+- **Parcelamento**: o usuário informa o valor de cada parcela, não o total — a Function multiplica
+  esse valor pela quantidade de parcelas para gerar as N linhas, todas com o mesmo valor (mudança
+  de 2026-10-11; antes era o inverso, dividindo um valor total com a sobra de centavos na última
+  parcela).
 - **Tabelas responsivas**: `DataTable` (`components/data-table.tsx`) e as primitivas de
   `ui/table.tsx` usam padding menor + `overflow-auto` no mobile; descrição trunca com reticências
   nas listas, detalhe completo só aparece no modal de pagamento.

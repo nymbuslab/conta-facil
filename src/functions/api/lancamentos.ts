@@ -28,14 +28,7 @@ const criarLancamentoSchema = z.discriminatedUnion('tipo', [
     parcelado: z.boolean().optional().default(false),
     quantidadeParcelas: z.number().int().min(2).max(360).optional(),
   }),
-]).refine(
-  (dados) =>
-    dados.tipo !== 'despesa' ||
-    !dados.parcelado ||
-    dados.quantidadeParcelas === undefined ||
-    dados.valor >= dados.quantidadeParcelas,
-  { message: 'Valor insuficiente para a quantidade de parcelas', path: ['quantidadeParcelas'] },
-)
+])
 
 export type RepositorioLancamentos = {
   listar: (userId: string) => Promise<LancamentoBanco[]>
@@ -119,14 +112,12 @@ function prepararLancamentos(
   }
 
   const parcelamentoId = randomUUID()
-  const valorBase = Math.floor(dados.valor / dados.quantidadeParcelas)
-  const resto = dados.valor - valorBase * dados.quantidadeParcelas
 
   return Array.from({ length: dados.quantidadeParcelas }, (_, indice) => ({
     userId,
     tipo: 'despesa' as const,
     descricao: dados.descricao,
-    valor: valorBase + (indice === dados.quantidadeParcelas! - 1 ? resto : 0),
+    valor: dados.valor,
     vencimento: adicionarMeses(dados.vencimento, indice),
     parcelamentoId,
     parcelaAtual: indice + 1,

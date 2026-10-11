@@ -33,7 +33,7 @@ describe('LancamentoModal — Despesa parcelada', () => {
     })
   })
 
-  it('muda o rotulo do campo Valor para "Valor total da dívida" quando parcelado', async () => {
+  it('muda o rotulo do campo Valor para "Valor da parcela" quando parcelado', async () => {
     abrirModalDespesa()
 
     expect(screen.getByText('Valor')).toBeInTheDocument()
@@ -41,7 +41,7 @@ describe('LancamentoModal — Despesa parcelada', () => {
     fireEvent.click(screen.getByLabelText('Parcelado?'))
 
     await waitFor(() => {
-      expect(screen.getByText('Valor total da dívida')).toBeInTheDocument()
+      expect(screen.getByText('Valor da parcela')).toBeInTheDocument()
     })
   })
 
@@ -57,7 +57,7 @@ describe('LancamentoModal — Despesa parcelada', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Quantidade de parcelas')).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText('Quantidade de parcelas'), { target: { value: '3' } })
-    fireEvent.change(screen.getByLabelText('Valor total da dívida'), { target: { value: '900' } })
+    fireEvent.change(screen.getByLabelText('Valor da parcela'), { target: { value: '900' } })
     fireEvent.change(screen.getByLabelText('Vencimento'), {
       target: { value: '2026-10-10' },
     })

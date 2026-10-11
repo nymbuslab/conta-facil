@@ -212,7 +212,7 @@ function FormularioDespesa({ onOpenChange }: { onOpenChange: (open: boolean) => 
             name="valor"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{parcelado ? 'Valor total da dívida' : 'Valor'}</FormLabel>
+                <FormLabel>{parcelado ? 'Valor da parcela' : 'Valor'}</FormLabel>
                 <FormControl>
                   <CampoValor {...field} />
                 </FormControl>
