@@ -16,8 +16,7 @@ partir do push em `master`, golden path validado de ponta a ponta. A idempotênc
 
 ## Prioridades
 
-- **P2** — monitorar a cadeia transitiva do Drizzle Kit: sem correção compatível disponível hoje
-  para os 4 alertas moderados residuais sem recorrer a `--force` ou downgrade
+_(nada no momento)_
 
 ## Fora de escopo (por ora)
 

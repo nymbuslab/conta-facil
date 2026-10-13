@@ -8,10 +8,7 @@ Nenhum item em andamento.
 
 ## 📋 Próximos Passos
 
-- [ ] (P2) Monitorar os 4 alertas moderados da cadeia de desenvolvimento
-  `drizzle-kit -> @esbuild-kit -> esbuild`: o único fix que o `npm audit` sugere hoje é downgrade
-  para `drizzle-kit@0.18.1` (atual: `0.31.11`), o que a decisão registrada proíbe. Sem correção
-  compatível disponível; revisitar quando houver uma
+_(nada no momento)_
 
 ## ✅ Concluído
 
@@ -103,3 +100,10 @@ Nenhum item em andamento.
   limpa sessão/conta); evento de idempotência `registrar(...)` movido para depois de
   `transacionar()` resolver, só emitido após o commit confirmado. Build, lint e 188 testes
   verdes (9 novos)
+- [x] Fechado o alerta moderado residual do Drizzle Kit sem downgrade: `drizzle-kit` é
+  `devDependency`, nunca entra no bundle do frontend nem na Neon Function em produção, e a
+  vulnerabilidade (`esbuild <=0.24.2`, GHSA-67mh-4wv8-2f99) é especificamente sobre o servidor de
+  dev do esbuild aceitar requisição de qualquer site — servidor que o `drizzle-kit` nunca sobe
+  (usa o esbuild só para carregar config/TS ao gerar ou aplicar migration). Risco real nulo nesse
+  uso; não há ação pendente. `npm run audit:security` continua fail-closed para alta/crítica —
+  2026-10-13
