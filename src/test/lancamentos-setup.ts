@@ -1,4 +1,5 @@
 import pg from 'pg'
+import { isDeepStrictEqual } from 'node:util'
 
 import app from '../functions/api/index.ts'
 import { garantirBranchDeTeste } from './guardar-branch-teste.ts'
@@ -38,20 +39,49 @@ const [usuarioA, usuarioB] = await Promise.all([criarUsuario('a'), criarUsuario(
 const pool = new pg.Pool({ connectionString: databaseUrl })
 
 try {
-  const criada = await app.request('/lancamentos', {
+  const chave = crypto.randomUUID()
+  const corpo = JSON.stringify({
+    tipo: 'despesa',
+    descricao: 'Despesa idempotente de integração',
+    valor: 100000,
+    vencimento: '2026-10-20',
+    parcelado: true,
+    quantidadeParcelas: 3,
+  })
+  const criar = (token: string, body = corpo) => app.request('/lancamentos', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${usuarioA.token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
+      'Idempotency-Key': chave,
     },
-    body: JSON.stringify({
-      tipo: 'despesa',
-      descricao: 'Despesa de integração',
-      valor: 12990,
-      vencimento: '2026-10-20',
-    }),
+    body,
   })
-  if (criada.status !== 201) throw new Error(`POST /lancamentos retornou ${criada.status}`)
+
+  const [primeira, concorrente] = await Promise.all([
+    criar(usuarioA.token),
+    criar(usuarioA.token),
+  ])
+  const [corpoPrimeira, corpoConcorrente] = await Promise.all([
+    primeira.json(),
+    concorrente.json(),
+  ])
+  if (primeira.status !== 201 || concorrente.status !== 201) {
+    throw new Error(`POST /lancamentos concorrente retornou ${primeira.status}/${concorrente.status}`)
+  }
+  if (!isDeepStrictEqual(corpoPrimeira, corpoConcorrente)) {
+    throw new Error('Replay concorrente nao preservou o lote original')
+  }
+
+  const conflito = await criar(usuarioA.token, JSON.stringify({
+    tipo: 'receita', descricao: 'Payload diferente', valor: 1, dataEmissao: '2026-10-11',
+  }))
+  if (conflito.status !== 409) throw new Error('Reuso da chave com outro payload nao retornou 409')
+
+  const mesmaChaveOutroUsuario = await criar(usuarioB.token)
+  if (mesmaChaveOutroUsuario.status !== 201) {
+    throw new Error('A mesma chave nao ficou isolada por usuario')
+  }
 
   const [listaA, listaB] = await Promise.all([
     app.request('/lancamentos', {
@@ -71,8 +101,23 @@ try {
     throw new Error('Lancamento vazou para outro usuario')
   }
 
-  console.log('Lancamentos reais isolados entre dois usuarios na branch de teste')
+  const contagens = await pool.query<{ user_id: string; total: string }>(
+    `select user_id, count(*)::text as total
+       from lancamentos
+      where user_id = any($1::uuid[]) and descricao = $2
+      group by user_id`,
+    [[usuarioA.id, usuarioB.id], 'Despesa idempotente de integração'],
+  )
+  const porUsuario = new Map(contagens.rows.map((item) => [item.user_id, Number(item.total)]))
+  if (porUsuario.get(usuarioA.id) !== 3 || porUsuario.get(usuarioB.id) !== 3) {
+    throw new Error('Lote idempotente nao preservou exatamente tres parcelas por usuario')
+  }
+
+  console.log('Lancamentos reais provaram replay concorrente, conflito e isolamento por usuario')
 } finally {
+  await pool.query('delete from idempotencias where user_id = any($1::uuid[])', [
+    [usuarioA.id, usuarioB.id],
+  ])
   await pool.query('delete from lancamentos where user_id = any($1::uuid[])', [
     [usuarioA.id, usuarioB.id],
   ])

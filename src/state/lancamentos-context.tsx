@@ -150,7 +150,7 @@ export function LancamentosProvider({
   async function adicionarReceita(dados: ReceitaFormValues) {
     const valor = parseValorMonetario(dados.valor)
     if (valor === null) return
-    const criados = await clienteAtual.post<LancamentoApi[]>('/lancamentos', {
+    const criados = await clienteAtual.postIdempotente<LancamentoApi[]>('/lancamentos', {
       tipo: 'receita',
       descricao: dados.descricao,
       valor: Math.round(valor * 100),
@@ -162,7 +162,7 @@ export function LancamentosProvider({
   async function adicionarDespesa(dados: DespesaFormValues) {
     const valor = parseValorMonetario(dados.valor)
     if (valor === null) return
-    const criados = await clienteAtual.post<LancamentoApi[]>('/lancamentos', {
+    const criados = await clienteAtual.postIdempotente<LancamentoApi[]>('/lancamentos', {
       tipo: 'despesa',
       descricao: dados.descricao,
       valor: Math.round(valor * 100),

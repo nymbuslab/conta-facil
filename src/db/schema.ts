@@ -5,10 +5,12 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core'
 
@@ -59,7 +61,25 @@ export const caixinhas = pgTable(
   ],
 )
 
+export const idempotencias = pgTable(
+  'idempotencias',
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    chave: uuid().notNull(),
+    operacao: text().notNull(),
+    hashRequisicao: text('hash_requisicao').notNull(),
+    statusResposta: integer('status_resposta').notNull(),
+    corpoResposta: jsonb('corpo_resposta').notNull(),
+    criadoEm: timestamp('criado_em', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (tabela) => [
+    unique('idempotencias_user_id_chave_unique').on(tabela.userId, tabela.chave),
+  ],
+)
+
 export type LancamentoBanco = typeof lancamentos.$inferSelect
 export type NovoLancamentoBanco = typeof lancamentos.$inferInsert
 export type CaixinhaBanco = typeof caixinhas.$inferSelect
 export type NovaCaixinhaBanco = typeof caixinhas.$inferInsert
+export type IdempotenciaBanco = typeof idempotencias.$inferSelect

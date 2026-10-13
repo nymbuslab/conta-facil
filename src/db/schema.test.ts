@@ -1,11 +1,30 @@
 import { getTableConfig } from 'drizzle-orm/pg-core'
 import { describe, expect, it } from 'vitest'
 
-import { caixinhas, lancamentos } from './schema'
+import { caixinhas, idempotencias, lancamentos } from './schema'
 
 function colunasDa(tabela: typeof lancamentos | typeof caixinhas) {
   return new Map(getTableConfig(tabela).columns.map((coluna) => [coluna.name, coluna]))
 }
+
+describe('schema de idempotencia', () => {
+  it('persiste operacao hash status e resposta com unicidade por usuario e chave', () => {
+    const configuracao = getTableConfig(idempotencias)
+    const colunas = new Map(configuracao.columns.map((coluna) => [coluna.name, coluna]))
+
+    expect([...colunas.keys()]).toEqual(expect.arrayContaining([
+      'id', 'user_id', 'chave', 'operacao', 'hash_requisicao',
+      'status_resposta', 'corpo_resposta', 'criado_em',
+    ]))
+    for (const nome of ['user_id', 'chave', 'operacao', 'hash_requisicao', 'status_resposta', 'corpo_resposta']) {
+      expect(colunas.get(nome)?.notNull).toBe(true)
+    }
+    const unicas = configuracao.uniqueConstraints.map((restricao) =>
+      restricao.columns.map((coluna) => coluna.name),
+    )
+    expect(unicas).toContainEqual(['user_id', 'chave'])
+  })
+})
 
 describe('schema financeiro', () => {
   it.each([

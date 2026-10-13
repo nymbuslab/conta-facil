@@ -9,6 +9,7 @@ import {
 } from '../../db/schema.ts'
 import type { VariaveisAuth } from './auth-middleware.ts'
 import { obterBanco } from './db.ts'
+import { executarComIdempotencia } from './idempotencia.ts'
 
 const criarCaixinhaSchema = z.object({
   nome: z.string().trim().min(1),
@@ -24,8 +25,8 @@ export type ResultadoResgate =
 export type RepositorioCaixinhas = {
   listar: (userId: string) => Promise<CaixinhaBanco[]>
   criar: (dados: NovaCaixinhaBanco) => Promise<CaixinhaBanco>
-  depositar: (userId: string, id: string, valor: number) => Promise<CaixinhaBanco | null>
-  resgatar: (userId: string, id: string, valor: number) => Promise<ResultadoResgate>
+  depositar: (userId: string, id: string, valor: number, banco?: unknown) => Promise<CaixinhaBanco | null>
+  resgatar: (userId: string, id: string, valor: number, banco?: unknown) => Promise<ResultadoResgate>
   excluir: (userId: string, id: string) => Promise<boolean>
 }
 
@@ -41,8 +42,9 @@ const repositorioPadrao: RepositorioCaixinhas = {
     const [criada] = await obterBanco().insert(caixinhas).values(dados).returning()
     return criada
   },
-  async depositar(userId, id, valor) {
-    const [atualizada] = await obterBanco()
+  async depositar(userId, id, valor, transacao) {
+    const banco = (transacao ?? obterBanco()) as ReturnType<typeof obterBanco>
+    const [atualizada] = await banco
       .update(caixinhas)
       .set({
         valorGuardado: sql`${caixinhas.valorGuardado} + ${valor}`,
@@ -52,8 +54,9 @@ const repositorioPadrao: RepositorioCaixinhas = {
       .returning()
     return atualizada ?? null
   },
-  async resgatar(userId, id, valor) {
-    const [atualizada] = await obterBanco()
+  async resgatar(userId, id, valor, transacao) {
+    const banco = (transacao ?? obterBanco()) as ReturnType<typeof obterBanco>
+    const [atualizada] = await banco
       .update(caixinhas)
       .set({
         valorGuardado: sql`${caixinhas.valorGuardado} - ${valor}`,
@@ -69,7 +72,7 @@ const repositorioPadrao: RepositorioCaixinhas = {
       .returning()
     if (atualizada) return { tipo: 'ok', caixinha: atualizada }
 
-    const [existente] = await obterBanco()
+    const [existente] = await banco
       .select()
       .from(caixinhas)
       .where(and(eq(caixinhas.id, id), eq(caixinhas.userId, userId)))
@@ -94,7 +97,21 @@ async function lerCorpoJson(contexto: { req: { json: () => Promise<unknown> } })
   }
 }
 
-export function criarRotasCaixinhas(repositorio: RepositorioCaixinhas = repositorioPadrao) {
+class RespostaMovimentacaoError extends Error {
+  readonly status: 400 | 404
+  readonly corpo: { erro: string }
+
+  constructor(status: 400 | 404, corpo: { erro: string }) {
+    super(corpo.erro)
+    this.status = status
+    this.corpo = corpo
+  }
+}
+
+export function criarRotasCaixinhas(
+  repositorio: RepositorioCaixinhas = repositorioPadrao,
+  executarIdempotencia = executarComIdempotencia,
+) {
   const app = new Hono<{ Variables: VariaveisAuth }>()
 
   app.get('/', async (contexto) => contexto.json(await repositorio.listar(contexto.get('userId'))))
@@ -124,9 +141,29 @@ export function criarRotasCaixinhas(repositorio: RepositorioCaixinhas = reposito
     const resultado = movimentarSchema.safeParse(corpo.dados)
     if (!resultado.success) return contexto.json({ erro: 'Valor inválido' }, 400)
 
-    const atualizada = await repositorio.depositar(contexto.get('userId'), id.data, resultado.data.valor)
-    if (!atualizada) return contexto.json({ erro: 'Caixinha não encontrada' }, 404)
-    return contexto.json(atualizada)
+    const chave = contexto.req.header('Idempotency-Key')
+    if (!chave) {
+      const atualizada = await repositorio.depositar(contexto.get('userId'), id.data, resultado.data.valor)
+      if (!atualizada) return contexto.json({ erro: 'Caixinha não encontrada' }, 404)
+      return contexto.json(atualizada)
+    }
+    const chaveValida = z.string().uuid().safeParse(chave)
+    if (!chaveValida.success) return contexto.json({ erro: 'Chave de idempotência inválida' }, 400)
+    try {
+      const idempotencia = await executarIdempotencia({
+        userId: contexto.get('userId'), chave: chaveValida.data,
+        operacao: 'caixinhas.depositar', payload: { id: id.data, ...resultado.data },
+      }, async (banco) => {
+        const atualizada = await repositorio.depositar(contexto.get('userId'), id.data, resultado.data.valor, banco)
+        if (!atualizada) throw new RespostaMovimentacaoError(404, { erro: 'Caixinha não encontrada' })
+        return { status: 200, corpo: atualizada }
+      })
+      if (idempotencia.tipo === 'conflito') return contexto.json({ erro: 'Chave de idempotência já usada com outro pedido' }, 409)
+      return contexto.json(idempotencia.corpo as CaixinhaBanco)
+    } catch (erro) {
+      if (erro instanceof RespostaMovimentacaoError) return contexto.json(erro.corpo, erro.status)
+      throw erro
+    }
   })
 
   app.post('/:id/resgatar', async (contexto) => {
@@ -139,10 +176,31 @@ export function criarRotasCaixinhas(repositorio: RepositorioCaixinhas = reposito
     const resultado = movimentarSchema.safeParse(corpo.dados)
     if (!resultado.success) return contexto.json({ erro: 'Valor inválido' }, 400)
 
-    const resgate = await repositorio.resgatar(contexto.get('userId'), id.data, resultado.data.valor)
-    if (resgate.tipo === 'nao_encontrada') return contexto.json({ erro: 'Caixinha não encontrada' }, 404)
-    if (resgate.tipo === 'saldo_insuficiente') return contexto.json({ erro: 'Saldo insuficiente' }, 400)
-    return contexto.json(resgate.caixinha)
+    const chave = contexto.req.header('Idempotency-Key')
+    if (!chave) {
+      const resgate = await repositorio.resgatar(contexto.get('userId'), id.data, resultado.data.valor)
+      if (resgate.tipo === 'nao_encontrada') return contexto.json({ erro: 'Caixinha não encontrada' }, 404)
+      if (resgate.tipo === 'saldo_insuficiente') return contexto.json({ erro: 'Saldo insuficiente' }, 400)
+      return contexto.json(resgate.caixinha)
+    }
+    const chaveValida = z.string().uuid().safeParse(chave)
+    if (!chaveValida.success) return contexto.json({ erro: 'Chave de idempotência inválida' }, 400)
+    try {
+      const idempotencia = await executarIdempotencia({
+        userId: contexto.get('userId'), chave: chaveValida.data,
+        operacao: 'caixinhas.resgatar', payload: { id: id.data, ...resultado.data },
+      }, async (banco) => {
+        const resgate = await repositorio.resgatar(contexto.get('userId'), id.data, resultado.data.valor, banco)
+        if (resgate.tipo === 'nao_encontrada') throw new RespostaMovimentacaoError(404, { erro: 'Caixinha não encontrada' })
+        if (resgate.tipo === 'saldo_insuficiente') throw new RespostaMovimentacaoError(400, { erro: 'Saldo insuficiente' })
+        return { status: 200, corpo: resgate.caixinha }
+      })
+      if (idempotencia.tipo === 'conflito') return contexto.json({ erro: 'Chave de idempotência já usada com outro pedido' }, 409)
+      return contexto.json(idempotencia.corpo as CaixinhaBanco)
+    } catch (erro) {
+      if (erro instanceof RespostaMovimentacaoError) return contexto.json(erro.corpo, erro.status)
+      throw erro
+    }
   })
 
   app.delete('/:id', async (contexto) => {

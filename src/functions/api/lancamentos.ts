@@ -11,6 +11,7 @@ import {
 } from '../../db/schema.ts'
 import type { VariaveisAuth } from './auth-middleware.ts'
 import { obterBanco } from './db.ts'
+import { executarComIdempotencia } from './idempotencia.ts'
 
 const baseLancamentoSchema = z.object({
   descricao: z.string().trim().min(1),
@@ -32,7 +33,7 @@ const criarLancamentoSchema = z.discriminatedUnion('tipo', [
 
 export type RepositorioLancamentos = {
   listar: (userId: string) => Promise<LancamentoBanco[]>
-  criarMuitos: (dados: NovoLancamentoBanco[]) => Promise<LancamentoBanco[]>
+  criarMuitos: (dados: NovoLancamentoBanco[], banco?: unknown) => Promise<LancamentoBanco[]>
   marcarComoPaga: (userId: string, id: string) => Promise<LancamentoBanco | null>
 }
 
@@ -44,8 +45,9 @@ const repositorioPadrao: RepositorioLancamentos = {
       .where(eq(lancamentos.userId, userId))
       .orderBy(lancamentos.criadoEm)
   },
-  criarMuitos(dados) {
-    return obterBanco().insert(lancamentos).values(dados).returning()
+  criarMuitos(dados, transacao) {
+    const banco = (transacao ?? obterBanco()) as ReturnType<typeof obterBanco>
+    return banco.insert(lancamentos).values(dados).returning()
   },
   async marcarComoPaga(userId, id) {
     const [atualizado] = await obterBanco()
@@ -137,6 +139,7 @@ async function lerCorpoJson(contexto: { req: { json: () => Promise<unknown> } })
 
 export function criarRotasLancamentos(
   repositorio: RepositorioLancamentos = repositorioPadrao,
+  executarIdempotencia = executarComIdempotencia,
 ) {
   const app = new Hono<{ Variables: VariaveisAuth }>()
 
@@ -154,8 +157,27 @@ export function criarRotasLancamentos(
 
     try {
       const novos = prepararLancamentos(contexto.get('userId'), resultado.data)
-      const criados = await repositorio.criarMuitos(novos)
-      return contexto.json(criados, 201)
+      const chave = contexto.req.header('Idempotency-Key')
+      if (!chave) {
+        const criados = await repositorio.criarMuitos(novos)
+        return contexto.json(criados, 201)
+      }
+      const chaveValida = z.string().uuid().safeParse(chave)
+      if (!chaveValida.success) return contexto.json({ erro: 'Chave de idempotência inválida' }, 400)
+
+      const idempotencia = await executarIdempotencia({
+        userId: contexto.get('userId'),
+        chave: chaveValida.data,
+        operacao: 'lancamentos.criar',
+        payload: resultado.data,
+      }, async (banco) => ({
+        status: 201,
+        corpo: await repositorio.criarMuitos(novos, banco),
+      }))
+      if (idempotencia.tipo === 'conflito') {
+        return contexto.json({ erro: 'Chave de idempotência já usada com outro pedido' }, 409)
+      }
+      return contexto.json(idempotencia.corpo as LancamentoBanco[], 201)
     } catch (erro) {
       if (erro instanceof Error && erro.message.includes('parcelas')) {
         return contexto.json({ erro: 'Informe a quantidade de parcelas' }, 400)

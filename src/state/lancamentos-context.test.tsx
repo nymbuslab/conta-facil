@@ -11,6 +11,7 @@ function criarCliente(overrides: Partial<ApiClient> = {}) {
   return {
     get: vi.fn().mockResolvedValue([]),
     post: vi.fn().mockResolvedValue([]),
+    postIdempotente: vi.fn().mockResolvedValue([]),
     patch: vi.fn(),
     delete: vi.fn(),
     ...overrides,
@@ -48,7 +49,7 @@ describe('LancamentosProvider', () => {
   })
 
   it('adicionarDespesa envia centavos e reflete todas as parcelas devolvidas', async () => {
-    const post = vi.fn().mockResolvedValue([
+    const postIdempotente = vi.fn().mockResolvedValue([
       { id: 'parcela-1', tipo: 'despesa', descricao: 'Notebook', valor: 33333,
         vencimento: '2026-10-10', paga: false, parcelamentoId: 'parcelamento-1', parcelaAtual: 1, totalParcelas: 3 },
       { id: 'parcela-2', tipo: 'despesa', descricao: 'Notebook', valor: 33333,
@@ -56,7 +57,7 @@ describe('LancamentosProvider', () => {
       { id: 'parcela-3', tipo: 'despesa', descricao: 'Notebook', valor: 33334,
         vencimento: '2026-12-10', paga: false, parcelamentoId: 'parcelamento-1', parcelaAtual: 3, totalParcelas: 3 },
     ])
-    const cliente = criarCliente({ post })
+    const cliente = criarCliente({ postIdempotente })
     const { result } = montar(cliente)
     await waitFor(() => expect(result.current.carregando).toBe(false))
 
@@ -67,11 +68,32 @@ describe('LancamentosProvider', () => {
       })
     })
 
-    expect(post).toHaveBeenCalledWith('/lancamentos', {
+    expect(postIdempotente).toHaveBeenCalledWith('/lancamentos', {
       tipo: 'despesa', descricao: 'Notebook', valor: 100000,
       vencimento: '2026-10-10', parcelado: true, quantidadeParcelas: 3,
     })
     expect(result.current.despesas.map((item) => item.valor)).toEqual([333.33, 333.33, 333.34])
+  })
+
+  it('adicionarReceita usa o POST idempotente com o payload em centavos', async () => {
+    const postIdempotente = vi.fn().mockResolvedValue([
+      { id: 'receita-1', tipo: 'receita', descricao: 'Freelance', valor: 125050,
+        dataEmissao: '2026-10-11', vencimento: null, paga: false, parcelamentoId: null,
+        parcelaAtual: null, totalParcelas: null },
+    ])
+    const { result } = montar(criarCliente({ postIdempotente }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+
+    await act(async () => {
+      await result.current.adicionarReceita({
+        descricao: 'Freelance', valor: '1.250,50', dataEmissao: '2026-10-11',
+      })
+    })
+
+    expect(postIdempotente).toHaveBeenCalledWith('/lancamentos', {
+      tipo: 'receita', descricao: 'Freelance', valor: 125050, dataEmissao: '2026-10-11',
+    })
+    expect(result.current.receitas[0]).toMatchObject({ descricao: 'Freelance', valor: 1250.5 })
   })
 
   it('expoe a falha inicial e permite tentar novamente', async () => {

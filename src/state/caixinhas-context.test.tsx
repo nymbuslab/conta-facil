@@ -11,6 +11,7 @@ function criarCliente(overrides: Partial<ApiClient> = {}) {
   return {
     get: vi.fn().mockResolvedValue([]),
     post: vi.fn(),
+    postIdempotente: vi.fn(),
     patch: vi.fn(),
     delete: vi.fn(),
     ...overrides,
@@ -48,25 +49,26 @@ describe('CaixinhasProvider', () => {
   it('cria e deposita usando a resposta persistida da Function', async () => {
     const post = vi.fn()
       .mockResolvedValueOnce({ id: 'caixinha-1', nome: 'Viagem', valorGuardado: 0, meta: 600000 })
+    const postIdempotente = vi.fn()
       .mockResolvedValueOnce({ id: 'caixinha-1', nome: 'Viagem', valorGuardado: 240000, meta: 600000 })
-    const { result } = montar(criarCliente({ post }))
+    const { result } = montar(criarCliente({ post, postIdempotente }))
     await waitFor(() => expect(result.current.carregando).toBe(false))
 
     await act(async () => result.current.criarCaixinha({ nome: 'Viagem', meta: '6.000,00' }))
     await act(async () => result.current.depositar('caixinha-1', { valor: '2.400,00' }))
 
-    expect(post).toHaveBeenNthCalledWith(1, '/caixinhas', { nome: 'Viagem', meta: 600000 })
-    expect(post).toHaveBeenNthCalledWith(2, '/caixinhas/caixinha-1/depositar', { valor: 240000 })
+    expect(post).toHaveBeenCalledWith('/caixinhas', { nome: 'Viagem', meta: 600000 })
+    expect(postIdempotente).toHaveBeenCalledWith('/caixinhas/caixinha-1/depositar', { valor: 240000 })
     expect(result.current.caixinhas[0].valorGuardado).toBe(2400)
   })
 
   it('saldo insuficiente devolve sucesso false sem alterar as caixinhas', async () => {
-    const post = vi.fn().mockRejectedValue(new ApiError(400, 'Saldo insuficiente'))
+    const postIdempotente = vi.fn().mockRejectedValue(new ApiError(400, 'Saldo insuficiente'))
     const cliente = criarCliente({
       get: vi.fn().mockResolvedValue([
         { id: 'reserva-1', nome: 'Reserva', valorGuardado: 10000, meta: 100000 },
       ]),
-      post,
+      postIdempotente,
     })
     const { result } = montar(cliente)
     await waitFor(() => expect(result.current.carregando).toBe(false))
@@ -77,6 +79,7 @@ describe('CaixinhasProvider', () => {
     })
 
     expect(resposta).toEqual({ sucesso: false, erro: 'Saldo insuficiente' })
+    expect(postIdempotente).toHaveBeenCalledWith('/caixinhas/reserva-1/resgatar', { valor: 20000 })
     expect(result.current.caixinhas[0].valorGuardado).toBe(100)
   })
 

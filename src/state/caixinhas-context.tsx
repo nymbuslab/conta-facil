@@ -132,7 +132,7 @@ export function CaixinhasProvider({
     const valor = parseValorMonetario(dados.valor)
     if (valor === null) return { sucesso: false, erro: 'Informe um valor valido' }
     try {
-      const atualizada = await clienteAtual.post<CaixinhaApi>(`/caixinhas/${id}/${tipo}`, {
+      const atualizada = await clienteAtual.postIdempotente<CaixinhaApi>(`/caixinhas/${id}/${tipo}`, {
         valor: Math.round(valor * 100),
       })
       const caixinha = paraCaixinha(atualizada)

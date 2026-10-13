@@ -2,6 +2,7 @@ type OpcoesApiClient = {
   baseUrl: string
   obterToken: () => Promise<string | null>
   fetcher?: typeof fetch
+  gerarChave?: () => string
 }
 
 type CorpoErro = {
@@ -19,10 +20,19 @@ export class ApiError extends Error {
   }
 }
 
-export function criarApiClient({ baseUrl, obterToken, fetcher = fetch }: OpcoesApiClient) {
+export function criarApiClient({
+  baseUrl,
+  obterToken,
+  fetcher = fetch,
+  gerarChave = () => crypto.randomUUID(),
+}: OpcoesApiClient) {
   const base = baseUrl.replace(/\/$/, '')
 
-  async function requisitar<T>(caminho: string, init: RequestInit = {}) {
+  async function requisitar<T>(
+    caminho: string,
+    init: RequestInit = {},
+    repetirFalhaTransitoria = false,
+  ) {
     const token = await obterToken()
     if (!token) throw new ApiError(401, 'Sessão expirada')
 
@@ -30,12 +40,26 @@ export function criarApiClient({ baseUrl, obterToken, fetcher = fetch }: OpcoesA
     headers.set('Authorization', `Bearer ${token}`)
     if (init.body) headers.set('Content-Type', 'application/json')
 
-    const resposta = await fetcher(
-      new Request(`${base}${caminho.startsWith('/') ? caminho : `/${caminho}`}`, {
-        ...init,
-        headers,
-      }),
-    )
+    const tentativas = repetirFalhaTransitoria ? 2 : 1
+    let resposta: Response | null = null
+    let falhaRede: unknown
+
+    for (let tentativa = 0; tentativa < tentativas; tentativa += 1) {
+      try {
+        resposta = await fetcher(
+          new Request(`${base}${caminho.startsWith('/') ? caminho : `/${caminho}`}`, {
+            ...init,
+            headers,
+          }),
+        )
+        if (![502, 503, 504].includes(resposta.status) || tentativa === tentativas - 1) break
+      } catch (erro) {
+        falhaRede = erro
+        if (tentativa === tentativas - 1) throw erro
+      }
+    }
+
+    if (!resposta) throw falhaRede
 
     if (!resposta.ok) {
       const corpo = await resposta.clone().json().catch(() => null) as CorpoErro | null
@@ -56,6 +80,14 @@ export function criarApiClient({ baseUrl, obterToken, fetcher = fetch }: OpcoesA
         method: 'POST',
         body: corpo === undefined ? undefined : JSON.stringify(corpo),
       }),
+    postIdempotente: <T>(caminho: string, corpo?: unknown) => {
+      const chave = gerarChave()
+      return requisitar<T>(caminho, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': chave },
+        body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      }, true)
+    },
     patch: <T>(caminho: string, corpo?: unknown) =>
       requisitar<T>(caminho, {
         method: 'PATCH',

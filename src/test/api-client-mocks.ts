@@ -21,29 +21,32 @@ export function criarClienteLancamentosTeste(iniciais = lancamentosApiIniciais()
   let dados: Registro[] = structuredClone(iniciais)
   let sequencia = 0
 
+  const criarLancamentos = async (_caminho: string, corpo?: unknown) => {
+    const entrada = corpo as Registro
+    const quantidade = entrada.parcelado ? Number(entrada.quantidadeParcelas) : 1
+    const total = Number(entrada.valor)
+    const base = Math.floor(total / quantidade)
+    const parcelamentoId = quantidade > 1 ? `parcelamento-${++sequencia}` : null
+    const criados = Array.from({ length: quantidade }, (_, indice) => ({
+      id: `lancamento-${++sequencia}`,
+      tipo: entrada.tipo,
+      descricao: entrada.descricao,
+      valor: base + (indice === quantidade - 1 ? total - base * quantidade : 0),
+      dataEmissao: entrada.dataEmissao ?? null,
+      vencimento: entrada.vencimento ? adicionarMeses(String(entrada.vencimento), indice) : null,
+      paga: false,
+      parcelamentoId,
+      parcelaAtual: quantidade > 1 ? indice + 1 : null,
+      totalParcelas: quantidade > 1 ? quantidade : null,
+    }))
+    dados = [...dados, ...criados]
+    return structuredClone(criados)
+  }
+
   return {
     get: async () => structuredClone(dados),
-    post: async (_caminho: string, corpo?: unknown) => {
-      const entrada = corpo as Registro
-      const quantidade = entrada.parcelado ? Number(entrada.quantidadeParcelas) : 1
-      const total = Number(entrada.valor)
-      const base = Math.floor(total / quantidade)
-      const parcelamentoId = quantidade > 1 ? `parcelamento-${++sequencia}` : null
-      const criados = Array.from({ length: quantidade }, (_, indice) => ({
-        id: `lancamento-${++sequencia}`,
-        tipo: entrada.tipo,
-        descricao: entrada.descricao,
-        valor: base + (indice === quantidade - 1 ? total - base * quantidade : 0),
-        dataEmissao: entrada.dataEmissao ?? null,
-        vencimento: entrada.vencimento ? adicionarMeses(String(entrada.vencimento), indice) : null,
-        paga: false,
-        parcelamentoId,
-        parcelaAtual: quantidade > 1 ? indice + 1 : null,
-        totalParcelas: quantidade > 1 ? quantidade : null,
-      }))
-      dados = [...dados, ...criados]
-      return structuredClone(criados)
-    },
+    post: criarLancamentos,
+    postIdempotente: criarLancamentos,
     patch: async (caminho: string) => {
       const id = caminho.split('/')[2]
       dados = dados.map((item) => item.id === id ? { ...item, paga: true } : item)
@@ -57,6 +60,20 @@ export function criarClienteCaixinhasTeste(iniciais: Registro[] = []): ApiClient
   let dados = structuredClone(iniciais)
   let sequencia = 0
 
+  const movimentar = async (caminho: string, corpo?: unknown) => {
+    const entrada = corpo as { valor?: number }
+    const [, , id, acao] = caminho.split('/')
+    const atual = dados.find((item) => item.id === id)
+    if (!atual) throw new Error('Caixinha nao encontrada')
+    const sinal = acao === 'depositar' ? 1 : -1
+    if (acao === 'resgatar' && Number(entrada.valor) > Number(atual.valorGuardado)) {
+      throw new Error('Valor maior que o guardado nesta caixinha')
+    }
+    const atualizada = { ...atual, valorGuardado: Number(atual.valorGuardado) + sinal * Number(entrada.valor) }
+    dados = dados.map((item) => item.id === id ? atualizada : item)
+    return structuredClone(atualizada)
+  }
+
   return {
     get: async () => structuredClone(dados),
     post: async (caminho: string, corpo?: unknown) => {
@@ -66,17 +83,9 @@ export function criarClienteCaixinhasTeste(iniciais: Registro[] = []): ApiClient
         dados = [...dados, criada]
         return structuredClone(criada)
       }
-      const [, , id, acao] = caminho.split('/')
-      const atual = dados.find((item) => item.id === id)
-      if (!atual) throw new Error('Caixinha nao encontrada')
-      const sinal = acao === 'depositar' ? 1 : -1
-      if (acao === 'resgatar' && Number(entrada.valor) > Number(atual.valorGuardado)) {
-        throw new Error('Valor maior que o guardado nesta caixinha')
-      }
-      const atualizada = { ...atual, valorGuardado: Number(atual.valorGuardado) + sinal * Number(entrada.valor) }
-      dados = dados.map((item) => item.id === id ? atualizada : item)
-      return structuredClone(atualizada)
+      return movimentar(caminho, corpo)
     },
+    postIdempotente: movimentar,
     patch: async () => undefined,
     delete: async (caminho: string) => {
       const id = caminho.split('/')[2]

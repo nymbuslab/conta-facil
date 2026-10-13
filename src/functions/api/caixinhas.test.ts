@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { criarRotasCaixinhas, type RepositorioCaixinhas } from './caixinhas'
+import { criarExecutorIdempotencia, type RegistroIdempotencia, type TransacaoIdempotencia } from './idempotencia'
 
 const CAIXINHA_ID = '22222222-2222-2222-2222-222222222222'
 
@@ -33,13 +34,28 @@ function criarRepositorio(): RepositorioCaixinhas {
   }
 }
 
-function criarApp(repositorio: RepositorioCaixinhas) {
+function criarExecutorMemoria() {
+  const registros = new Map<string, RegistroIdempotencia>()
+  return criarExecutorIdempotencia({
+    async transacionar(callback) {
+      const transacao: TransacaoIdempotencia = {
+        banco: null,
+        bloquear: async () => undefined,
+        buscar: async (userId, chave) => registros.get(`${userId}:${chave}`) ?? null,
+        salvar: async (registro) => { registros.set(`${registro.userId}:${registro.chave}`, registro) },
+      }
+      return callback(transacao)
+    },
+  }, vi.fn())
+}
+
+function criarApp(repositorio: RepositorioCaixinhas, userId = 'usuario-1', executar = criarExecutorMemoria()) {
   const app = new Hono<{ Variables: { userId: string } }>()
   app.use('*', async (contexto, next) => {
-    contexto.set('userId', 'usuario-1')
+    contexto.set('userId', userId)
     await next()
   })
-  app.route('/caixinhas', criarRotasCaixinhas(repositorio))
+  app.route('/caixinhas', criarRotasCaixinhas(repositorio, executar))
   return app
 }
 
@@ -110,5 +126,45 @@ describe('rotas de caixinhas', () => {
 
     expect(resposta.status).toBe(404)
     expect(repositorio.depositar).not.toHaveBeenCalled()
+  })
+
+  it('repete deposito e resgate sem duplicar efeito', async () => {
+    const app = criarApp(repositorio)
+    const depositar = { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': '11111111-1111-4111-8111-111111111111' }, body: JSON.stringify({ valor: 500 }) }
+    const primeiroDeposito = await app.request(`/caixinhas/${CAIXINHA_ID}/depositar`, depositar)
+    const replayDeposito = await app.request(`/caixinhas/${CAIXINHA_ID}/depositar`, depositar)
+    expect(primeiroDeposito.status).toBe(200)
+    expect(replayDeposito.status).toBe(200)
+    expect(await replayDeposito.json()).toEqual(await primeiroDeposito.json())
+    expect(repositorio.depositar).toHaveBeenCalledTimes(1)
+
+    const resgatar = { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': '22222222-2222-4222-8222-222222222222' }, body: JSON.stringify({ valor: 200 }) }
+    const primeiroResgate = await app.request(`/caixinhas/${CAIXINHA_ID}/resgatar`, resgatar)
+    const replayResgate = await app.request(`/caixinhas/${CAIXINHA_ID}/resgatar`, resgatar)
+    expect(primeiroResgate.status).toBe(200)
+    expect(replayResgate.status).toBe(200)
+    expect(await replayResgate.json()).toEqual(await primeiroResgate.json())
+    expect(repositorio.resgatar).toHaveBeenCalledTimes(1)
+  })
+
+  it('retorna 409 para payload ou operacao diferente com a mesma chave', async () => {
+    const executar = criarExecutorMemoria()
+    const app = criarApp(repositorio, 'usuario-1', executar)
+    const chave = '33333333-3333-4333-8333-333333333333'
+    const enviar = (acao: 'depositar' | 'resgatar', valor: number) => app.request(`/caixinhas/${CAIXINHA_ID}/${acao}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': chave }, body: JSON.stringify({ valor }),
+    })
+    expect((await enviar('depositar', 500)).status).toBe(200)
+    expect((await enviar('depositar', 501)).status).toBe(409)
+    expect((await enviar('resgatar', 500)).status).toBe(409)
+  })
+
+  it('saldo insuficiente nao reserva a chave e usuarios distintos podem reutiliza-la', async () => {
+    const executar = criarExecutorMemoria()
+    const chave = '44444444-4444-4444-8444-444444444444'
+    const init = { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': chave }, body: JSON.stringify({ valor: 1500 }) }
+    expect((await criarApp(repositorio, 'usuario-1', executar).request(`/caixinhas/${CAIXINHA_ID}/resgatar`, init)).status).toBe(400)
+    expect((await criarApp(repositorio, 'usuario-1', executar).request(`/caixinhas/${CAIXINHA_ID}/depositar`, { ...init, body: JSON.stringify({ valor: 1 }) })).status).toBe(200)
+    expect((await criarApp(repositorio).request(`/caixinhas/${CAIXINHA_ID}/depositar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: 1 }) })).status).toBe(200)
   })
 })
