@@ -25,7 +25,9 @@
     "test:function:health": "node --input-type=module -e \"const { default: app } = await import('./src/functions/api/index.ts'); const response = await app.request('/health'); const body = await response.json(); if (response.status !== 200 || body.ok !== true) process.exit(1)\"",
     "test:function:deployed": "node --env-file=.env.test.local src/test/function-deployed-setup.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "manutencao:limpar-usuarios-teste": "node --env-file=.env.test.local scripts/limpar-usuarios-teste.mjs",
+    "manutencao:limpar-idempotencias": "node --env-file=.env.local scripts/limpar-idempotencias.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
