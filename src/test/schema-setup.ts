@@ -1,6 +1,6 @@
 import pg from 'pg'
 
-import { garantirBranchDeTeste } from './guardar-branch-teste.ts'
+import { confirmarIdentidadeConexao, garantirBranchDeTeste } from './guardar-branch-teste.ts'
 
 garantirBranchDeTeste()
 
@@ -44,6 +44,7 @@ const esperadas = new Map([
 ])
 
 const pool = new pg.Pool({ connectionString: databaseUrl })
+await confirmarIdentidadeConexao({ pool })
 
 try {
   const resultado = await pool.query<{

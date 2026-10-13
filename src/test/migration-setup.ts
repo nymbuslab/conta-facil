@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process'
 
-import { garantirBranchDeTeste } from './guardar-branch-teste.ts'
+import { confirmarIdentidadeConexao, garantirBranchDeTeste } from './guardar-branch-teste.ts'
 
 garantirBranchDeTeste()
+await confirmarIdentidadeConexao()
 
 await new Promise<void>((resolve, reject) => {
   const processo = spawn(

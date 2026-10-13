@@ -1,7 +1,7 @@
 import pg from 'pg'
 
 import app from '../functions/api/index.ts'
-import { garantirBranchDeTeste } from './guardar-branch-teste.ts'
+import { confirmarIdentidadeConexao, garantirBranchDeTeste } from './guardar-branch-teste.ts'
 
 garantirBranchDeTeste()
 
@@ -9,6 +9,7 @@ const authBaseUrl = process.env.NEON_AUTH_BASE_URL
 const databaseUrl = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL
 
 if (!authBaseUrl || !databaseUrl) throw new Error('Variaveis de Auth ou Postgres ausentes')
+await confirmarIdentidadeConexao({ databaseUrl })
 
 async function criarUsuario(sufixo: string) {
   const respostaCadastro = await fetch(`${authBaseUrl}/sign-up/email`, {

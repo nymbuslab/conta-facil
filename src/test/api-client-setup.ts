@@ -1,12 +1,14 @@
 import app from '../functions/api/index.ts'
 import { criarApiClient } from '../lib/api-client.ts'
-import { garantirBranchDeTeste } from './guardar-branch-teste.ts'
+import { confirmarIdentidadeConexao, garantirBranchDeTeste } from './guardar-branch-teste.ts'
 
 garantirBranchDeTeste()
 
 const authBaseUrl = process.env.NEON_AUTH_BASE_URL
 
 if (!authBaseUrl) throw new Error('Variavel NEON_AUTH_BASE_URL ausente')
+
+await confirmarIdentidadeConexao()
 
 const email = `api-client-${Date.now()}@example.test`
 const password = `Teste-${Date.now()}-A1!`

@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url'
 import { Pool } from 'pg'
 
-import { garantirBranchDeTeste } from './guardar-branch-teste.ts'
+import { confirmarIdentidadeConexao, garantirBranchDeTeste } from './guardar-branch-teste.ts'
 
 const MENSAGEM_DATABASE_URL_AUSENTE =
   'DATABASE_URL da branch Neon de teste nao definida. Rode: neon env pull --branch test --file .env.test.local -e DATABASE_URL'
@@ -24,6 +24,7 @@ async function verificarConexao() {
   const db = getTestDb()
 
   try {
+    await confirmarIdentidadeConexao({ pool: db })
     const resultado = await db.query<{ valor: number }>('select 1 as valor')
 
     if (resultado.rows[0]?.valor !== 1) {

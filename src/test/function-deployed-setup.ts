@@ -1,4 +1,4 @@
-import { garantirBranchDeTeste } from './guardar-branch-teste.ts'
+import { confirmarIdentidadeConexao, garantirBranchDeTeste } from './guardar-branch-teste.ts'
 
 garantirBranchDeTeste()
 
@@ -6,6 +6,8 @@ const authBaseUrl = process.env.NEON_AUTH_BASE_URL
 const functionBaseUrl = process.env.NEON_FUNCTION_API_BASE_URL
 
 if (!authBaseUrl || !functionBaseUrl) throw new Error('Variaveis da integracao remota ausentes')
+
+await confirmarIdentidadeConexao()
 
 const email = `function-remota-${Date.now()}@example.test`
 const respostaCadastro = await fetch(`${authBaseUrl}/sign-up/email`, {

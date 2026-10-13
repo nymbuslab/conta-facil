@@ -5,7 +5,7 @@ import pg from 'pg'
 import * as schema from '../db/schema.ts'
 import { caixinhas } from '../db/schema.ts'
 import { criarExecutorIdempotencia } from '../functions/api/idempotencia.ts'
-import { garantirBranchDeTeste } from './guardar-branch-teste.ts'
+import { confirmarIdentidadeConexao, garantirBranchDeTeste } from './guardar-branch-teste.ts'
 
 garantirBranchDeTeste()
 
@@ -17,6 +17,7 @@ const caixinhaId = '55555555-5555-4555-8555-555555555555'
 const chaveConcorrente = '66666666-6666-4666-8666-666666666666'
 const chaveRollback = '77777777-7777-4777-8777-777777777777'
 const pool = new pg.Pool({ connectionString: databaseUrl })
+await confirmarIdentidadeConexao({ pool })
 const eventos: Array<Record<string, unknown>> = []
 const executar = criarExecutorIdempotencia(undefined, (evento) => eventos.push(evento))
 

@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import app from '@/functions/api/index'
 import { criarApiClient, type ApiClient } from '@/lib/api-client'
 
-import { garantirBranchDeTeste } from '../test/guardar-branch-teste'
+import { confirmarIdentidadeConexao, garantirBranchDeTeste } from '../test/guardar-branch-teste'
 import { AuthProvider, type ClienteAuth } from './auth-context'
 import { CaixinhasProvider, useCaixinhas } from './caixinhas-context'
 
@@ -20,6 +20,7 @@ let clienteAuth: ClienteAuth
 
 beforeAll(async () => {
   if (!authBaseUrl || !databaseUrl) return
+  await confirmarIdentidadeConexao({ databaseUrl })
 
   const email = `provider-caixinhas-${Date.now()}@example.test`
   const respostaCadastro = await fetch(`${authBaseUrl}/sign-up/email`, {

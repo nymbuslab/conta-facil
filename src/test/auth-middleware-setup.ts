@@ -4,7 +4,7 @@ import {
   authMiddleware,
   type VariaveisAuth,
 } from '../functions/api/auth-middleware.ts'
-import { garantirBranchDeTeste } from './guardar-branch-teste.ts'
+import { confirmarIdentidadeConexao, garantirBranchDeTeste } from './guardar-branch-teste.ts'
 
 garantirBranchDeTeste()
 
@@ -13,6 +13,8 @@ const authBaseUrl = process.env.NEON_AUTH_BASE_URL
 if (!authBaseUrl || !process.env.NEON_AUTH_JWKS_URL) {
   throw new Error('Variaveis do Neon Auth ausentes')
 }
+
+await confirmarIdentidadeConexao()
 
 const email = `middleware-${Date.now()}@example.test`
 const password = `Teste-${Date.now()}-A1!`
