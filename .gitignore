@@ -40,3 +40,6 @@ docs/eventos/
 
 # Deploy — estado local (SHA do ultimo deploy da Function)
 .deploy-state.json
+
+# Log local da skill task-observer
+skill-observations/
