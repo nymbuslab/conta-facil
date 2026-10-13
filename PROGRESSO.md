@@ -8,7 +8,9 @@ Nenhum item em andamento.
 
 ## 📋 Próximos Passos
 
-_(nada no momento)_
+- [ ] (P2) Validar visualmente em produção os três status de despesa (A vencer/Vencido/Pago),
+  já que esta entrega não foi conferida no navegador — abrir quando for mexer de novo nessa
+  tela ou antes do próximo deploy de frontend.
 
 ## ✅ Concluído
 
@@ -110,3 +112,9 @@ _(nada no momento)_
 - [x] Deploy em `production` da Function com o fechamento dos itens de idempotência: o log
   `registrar(...)` agora roda só depois do commit confirmado. Publicado via `npm run deploy`,
   validado por health check (200) e `.deploy-state.json` apontando pro commit atual — 2026-10-13
+- [x] Status de despesa na lista ganhou um terceiro estado: "A vencer" (cor neutra, igual à
+  antiga "Pendente"), "Vencido" (vermelho, quando o vencimento já passou e não foi paga) e
+  "Pago" (verde). Cálculo feito em tela a partir de `paga` + `vencimento` (nova função
+  `estaVencida` em `src/lib/datas.ts`), sem mudança de schema, API ou banco. Build e 191
+  testes verdes — 2026-10-13 (build OK, UI não validada visualmente: o app exige login via
+  Neon Auth, serviço externo, e eu não entro com credenciais sem o usuário logar)

@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 
 import { ConfirmarPagamentoDialog } from '@/components/confirmar-pagamento-dialog'
 import { DataTable } from '@/components/data-table'
+import { estaVencida } from '@/lib/datas'
 import { formatarData, formatarMoeda } from '@/lib/formatters'
 import { useLancamentos } from '@/state/lancamentos-context'
 import type { Despesa, Receita } from '@/types/lancamento'
@@ -59,17 +60,21 @@ function criarColunasDespesa(aoSelecionarPendente: (despesa: Despesa) => void): 
       header: 'Status',
       cell: ({ getValue, row }) =>
         getValue<boolean>() ? (
-          <span className="text-xs font-medium text-muted-foreground">Pago</span>
+          <span className="text-xs font-medium text-success">Pago</span>
         ) : (
           <button
             type="button"
-            className="text-xs font-medium text-foreground underline-offset-2 hover:underline"
+            className={
+              estaVencida(row.original.vencimento)
+                ? 'text-xs font-medium text-destructive underline-offset-2 hover:underline'
+                : 'text-xs font-medium text-foreground underline-offset-2 hover:underline'
+            }
             onClick={(evento) => {
               evento.stopPropagation()
               aoSelecionarPendente(row.original)
             }}
           >
-            Pendente
+            {estaVencida(row.original.vencimento) ? 'Vencido' : 'A vencer'}
           </button>
         ),
     },
