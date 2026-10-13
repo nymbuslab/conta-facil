@@ -2,6 +2,11 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-13 — Status de despesa com data de vencimento
+
+- A lista de despesas agora distingue "A vencer" de "Vencido" (vermelho), além de "Pago"
+  (verde) — antes só existia "Pendente"/"Pago".
+
 ## 2026-10-13 — Idempotência na escrita financeira em produção
 
 - Lançamentos, depósitos e resgates agora podem ser repetidos com segurança: em caso de
