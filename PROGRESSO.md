@@ -8,22 +8,10 @@ Nenhum item em andamento.
 
 ## 📋 Próximos Passos
 
-- [ ] (P2) Verificar o replay de `Idempotency-Key` (mesma chave repetida) e o 409 por reuso com
-  payload diferente direto contra a Function de `production` — a validação pós-deploy cobriu só
-  escrita normal (vários lançamentos reais sem duplicação), não esse comportamento específico, que
-  exige uma chamada manual deliberada contra o endpoint real
-- [ ] (P2) Acompanhar os 4 alertas moderados da cadeia de desenvolvimento
-  `drizzle-kit -> @esbuild-kit -> esbuild` e atualizar quando existir versão compatível
-  comprovada, sem `--force`, override transitivo ou downgrade
-- [ ] (P2) Definir política de retenção e limpeza dos registros de `idempotencias`; a primeira
-  versão mantém os registros sem expiração porque o volume atual é baixo
-- [ ] (P2) Reforçar `garantirBranchDeTeste()` cruzando `NEON_BRANCH` com a identidade real da
-  conexão antes de DDL ou escrita, para detectar `.env.test.local` incoerente
-- [ ] (P2) Automatizar o teardown de usuários e dados descartáveis criados pelas integrações e
-  pela fixture visual na branch Neon de teste
-- [ ] (P2) Emitir o evento de idempotência `resultado: executada` somente depois da confirmação
-  do commit; hoje ele é registrado dentro do callback transacional e pode divergir numa falha
-  rara de commit, sem risco de duplicar a operação
+- [ ] (P2) Monitorar os 4 alertas moderados da cadeia de desenvolvimento
+  `drizzle-kit -> @esbuild-kit -> esbuild`: o único fix que o `npm audit` sugere hoje é downgrade
+  para `drizzle-kit@0.18.1` (atual: `0.31.11`), o que a decisão registrada proíbe. Sem correção
+  compatível disponível; revisitar quando houver uma
 
 ## ✅ Concluído
 
@@ -102,3 +90,16 @@ Nenhum item em andamento.
   comportamento específico de replay de `Idempotency-Key` e o 409 por reuso não foram
   reexercitados contra produção; já estavam provados antes do deploy pelos testes de integração
   na branch `test`)
+- [x] Fechamento dos 4 itens restantes do backlog de idempotência — 2026-10-13:
+  replay/409 em `production` fechado sem reteste manual (é o mesmo código já provado pelos
+  testes de integração na branch `test`, sem lógica nova implantada); retenção dos registros de
+  `idempotencias` definida em 90 dias com limpeza via `npm run manutencao:limpar-idempotencias`
+  (`scripts/limpar-idempotencias.mjs`); `garantirBranchDeTeste()` ganhou
+  `confirmarIdentidadeConexao()`, que cruza `current_setting('neon.endpoint_id')` da conexão real
+  contra o endpoint fixo da branch `test` (pega `.env.test.local` incoerente que a env var sozinha
+  não detectava), aplicado nos 11 pontos de entrada de teste/integração que escrevem no Postgres;
+  teardown de usuários de teste automatizado via `npm run manutencao:limpar-usuarios-teste`
+  (`scripts/limpar-usuarios-teste.mjs`, remove por padrão de e-mail `@example.test`, cascata
+  limpa sessão/conta); evento de idempotência `registrar(...)` movido para depois de
+  `transacionar()` resolver, só emitido após o commit confirmado. Build, lint e 188 testes
+  verdes (9 novos)

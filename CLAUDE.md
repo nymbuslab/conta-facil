@@ -26,6 +26,8 @@ npm run build    # typecheck + build de produção
 npm run audit:security                 # falha em alerta alto/crítico ou erro de rede
 npm run test:migrate                   # aplica migrations somente em test/test-*
 npm run test:integration:idempotencia  # concorrência e rollback no Postgres de teste
+npm run manutencao:limpar-idempotencias     # apaga idempotencias com mais de 90 dias
+npm run manutencao:limpar-usuarios-teste    # remove usuarios @example.test da branch de teste
 ```
 
 ## Arquitetura
@@ -99,7 +101,22 @@ listar — "Guardado" (caixinhas) é saldo corrido, não entra nesse filtro.
   logs não incluem descrição, payload ou valor. Migration `drizzle/0001_idempotencia.sql`;
   implantada em `production` desde 2026-10-13 (golden path de escrita validado manualmente; o
   replay da chave e o 409 por reuso continuam provados só pelos testes de integração na branch
-  `test`).
+  `test`, por ser o mesmo código, sem lógica nova implantada). O evento de log
+  (`registrar(...)` em `idempotencia.ts`) só é emitido depois que `transacionar()` resolve, nunca
+  dentro do callback, para nunca divergir de uma falha de commit. Retenção dos registros: 90 dias,
+  limpos por `npm run manutencao:limpar-idempotencias` (sem automação por cron nesta versão —
+  volume baixo não justifica a infraestrutura ainda).
+- **Identidade real da conexão de teste**: `garantirBranchDeTeste()` só confere a string
+  `NEON_BRANCH`; `confirmarIdentidadeConexao()` (mesmo arquivo,
+  `src/test/guardar-branch-teste.ts`) complementa consultando
+  `current_setting('neon.endpoint_id', true)` na conexão já aberta e comparando contra o endpoint
+  fixo da branch `test` (`ep-bold-thunder-b4np13yy`) — pega um `.env.test.local` incoerente que a
+  env var sozinha não detectaria. Chamada nos 11 pontos de entrada de teste/integração que
+  escrevem no Postgres, antes de qualquer DDL ou escrita. Atualizar a constante se a branch de
+  teste for recriada. Usuários reais de teste (`@example.test`, criados via Neon Auth pelos
+  scripts de integração) são removidos por `npm run manutencao:limpar-usuarios-teste`
+  (`scripts/limpar-usuarios-teste.mjs`); a cascata de FKs do `neon_auth` limpa sessão/conta
+  junto.
 - **Domínio confiável do Neon Auth**: toda branch nova precisa ter o domínio do frontend
   registrado via `add_auth_trusted_domain` (MCP do Neon) ou no console — sem isso, `sign-up`/
   `sign-in` tomam `403` mesmo com CORS da Function liberado, porque é uma allowlist separada do

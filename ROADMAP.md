@@ -16,14 +16,8 @@ partir do push em `master`, golden path validado de ponta a ponta. A idempotênc
 
 ## Prioridades
 
-- **P2** — verificar o replay de `Idempotency-Key` e o 409 por reuso direto contra a Function de
-  `production`, já que a validação pós-deploy cobriu só escrita normal
-- **P2** — atualizar a cadeia transitiva do Drizzle Kit quando houver correção compatível para
-  os 4 alertas moderados residuais, sem `--force` ou downgrade
-- **P2** — definir retenção dos registros de idempotência e automatizar o teardown de usuários e
-  dados descartáveis da branch de teste
-- **P2** — reforçar a trava dos scripts de teste com a identidade real da conexão e mover o log
-  de execução idempotente para depois da confirmação do commit
+- **P2** — monitorar a cadeia transitiva do Drizzle Kit: sem correção compatível disponível hoje
+  para os 4 alertas moderados residuais sem recorrer a `--force` ou downgrade
 
 ## Fora de escopo (por ora)
 
