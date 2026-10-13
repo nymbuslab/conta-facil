@@ -62,4 +62,4 @@ por Instant Restore está documentado em `docs/sprintx/features/rollout-neon-pro
 A idempotência financeira está implementada e implantada em `production` desde 2026-10-13:
 migration e Function publicadas, golden path de escrita validado manualmente. O replay de
 `Idempotency-Key` e o 409 por reuso continuam provados pelos testes de integração na branch
-`test`; reexercitá-los direto contra `production` é item aberto no `PROGRESSO.md`.
+`test`, por ser o mesmo código sem lógica nova implantada — não há reteste pendente.

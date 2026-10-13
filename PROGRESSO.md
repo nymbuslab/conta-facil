@@ -107,3 +107,6 @@ _(nada no momento)_
   (usa o esbuild só para carregar config/TS ao gerar ou aplicar migration). Risco real nulo nesse
   uso; não há ação pendente. `npm run audit:security` continua fail-closed para alta/crítica —
   2026-10-13
+- [x] Deploy em `production` da Function com o fechamento dos itens de idempotência: o log
+  `registrar(...)` agora roda só depois do commit confirmado. Publicado via `npm run deploy`,
+  validado por health check (200) e `.deploy-state.json` apontando pro commit atual — 2026-10-13
