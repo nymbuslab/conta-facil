@@ -116,6 +116,88 @@ describe('AuthProvider', () => {
     await expect(result.current.obterToken()).resolves.toBe('token-da-sessao')
   })
 
+  it('devolve null quando o token vem ausente ou em formato desconhecido', async () => {
+    const { cliente } = criarClienteAuth()
+    cliente.useSession = () => ({
+      data: { user: { id: 'usuario-1', name: 'Ana', email: 'ana@exemplo.com' }, session: {} },
+      error: null,
+      isPending: false,
+    })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <AuthProvider cliente={cliente}>{children}</AuthProvider>
+    )
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    cliente.token = vi.fn().mockResolvedValue(null)
+    await expect(result.current.obterToken()).resolves.toBeNull()
+
+    cliente.token = vi.fn().mockResolvedValue({ data: null, error: null })
+    await expect(result.current.obterToken()).resolves.toBeNull()
+
+    cliente.token = vi.fn().mockResolvedValue({ data: { session: {} }, error: null })
+    await expect(result.current.obterToken()).resolves.toBeNull()
+
+    cliente.token = vi.fn().mockResolvedValue({ data: { session: { token: 123 } }, error: null })
+    await expect(result.current.obterToken()).resolves.toBeNull()
+  })
+
+  it('expoe status erro (nao anonimo) quando a verificacao de sessao falha', () => {
+    const { cliente } = criarClienteAuth()
+    cliente.useSession = () => ({
+      data: null,
+      error: { message: 'jwks fora do ar' },
+      isPending: false,
+    })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <AuthProvider cliente={cliente}>{children}</AuthProvider>
+    )
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    expect(result.current.status).toBe('erro')
+    expect(result.current.usuario).toBeNull()
+  })
+
+  it('mantem autenticado quando ha usuario mesmo com erro de sessao', () => {
+    const { cliente } = criarClienteAuth()
+    cliente.useSession = () => ({
+      data: {
+        user: { id: 'usuario-1', name: 'Ana', email: 'ana@exemplo.com' },
+        session: {},
+      },
+      error: { message: 'refresh falhou' },
+      isPending: false,
+    })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <AuthProvider cliente={cliente}>{children}</AuthProvider>
+    )
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    expect(result.current.status).toBe('autenticado')
+  })
+
+  it('recarregarSessao chama o refetch da sessao', async () => {
+    const { cliente } = criarClienteAuth()
+    const refetch = vi.fn().mockResolvedValue(undefined)
+    cliente.useSession = () => ({
+      data: null,
+      error: { message: 'falha de rede' },
+      isPending: false,
+      refetch,
+    })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <AuthProvider cliente={cliente}>{children}</AuthProvider>
+    )
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await result.current.recarregarSessao()
+    })
+
+    expect(refetch).toHaveBeenCalledOnce()
+  })
+
   it('lanca erro quando useAuth e usado fora do provider', () => {
     expect(() => renderHook(() => useAuth())).toThrow(
       'useAuth deve ser usado dentro de AuthProvider',

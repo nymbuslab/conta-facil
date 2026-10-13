@@ -38,6 +38,23 @@ export function criarClienteAuthTeste(usuario: UsuarioTeste | null = usuarioTest
   }
 }
 
+/** Cliente cuja verificacao de sessao falha (ex.: JWKS fora do ar), mas com um refetch
+ * controlavel para testar o "Tentar novamente". */
+export function criarClienteAuthErro(refetch: () => unknown = () => {}): ClienteAuth {
+  return {
+    useSession: () => ({
+      data: null,
+      error: { message: 'Nao foi possivel verificar a sessao' },
+      isPending: false,
+      refetch,
+    }),
+    signIn: { email: async () => ({ data: {}, error: null }) },
+    signUp: { email: async () => ({ data: {}, error: null }) },
+    signOut: async () => ({ data: {}, error: null }),
+    token: async () => null,
+  }
+}
+
 type OpcoesRender = RenderOptions & {
   clienteLancamentos?: ApiClient
   clienteCaixinhas?: ApiClient

@@ -3,6 +3,7 @@ import { createRootRouteWithContext, Navigate, Outlet, useRouterState } from '@t
 
 import { BottomNav } from '@/components/bottom-nav'
 import { TopoMarca } from '@/components/topo-marca'
+import { Button } from '@/components/ui/button'
 import type { ApiClient } from '@/lib/api-client'
 import { AuthProvider, useAuth, type ClienteAuth } from '@/state/auth-context'
 import { CaixinhasProvider } from '@/state/caixinhas-context'
@@ -15,7 +16,7 @@ export type ContextoRoteador = {
 }
 
 function ConteudoRaiz() {
-  const { status } = useAuth()
+  const { status, recarregarSessao } = useAuth()
   const caminho = useRouterState({ select: (state) => state.location.pathname })
   const rotaPublica = caminho === '/login' || caminho === '/cadastro'
 
@@ -27,6 +28,22 @@ function ConteudoRaiz() {
           <p role="status" className="text-sm text-muted-foreground">
             Carregando sua conta...
           </p>
+        </main>
+      </>
+    )
+  }
+
+  if (status === 'erro') {
+    return (
+      <>
+        <TopoMarca />
+        <main className="flex min-h-[calc(100dvh-48px)] items-center justify-center px-4">
+          <div className="flex max-w-sm flex-col items-center gap-4 text-center">
+            <p role="alert" className="text-sm text-muted-foreground">
+              Não foi possível verificar sua sessão. Verifique sua conexão e tente novamente.
+            </p>
+            <Button onClick={() => void recarregarSessao()}>Tentar novamente</Button>
+          </div>
         </main>
       </>
     )

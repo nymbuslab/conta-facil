@@ -20,6 +20,7 @@ type SessaoAuth = {
   } | null
   error: unknown
   isPending: boolean
+  refetch?: () => unknown
 }
 
 export type ClienteAuth = {
@@ -35,12 +36,13 @@ export type ClienteAuth = {
 }
 
 type AuthContextValue = {
-  status: 'carregando' | 'autenticado' | 'anonimo'
+  status: 'carregando' | 'autenticado' | 'anonimo' | 'erro'
   usuario: Usuario | null
   entrar: (email: string, senha: string) => Promise<void>
   cadastrar: (nome: string, email: string, senha: string) => Promise<void>
   sair: () => Promise<void>
   obterToken: () => Promise<string | null>
+  recarregarSessao: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -74,13 +76,15 @@ function extrairToken(resultado: unknown) {
   const data = 'data' in resultado ? resultado.data : null
   if (!data || typeof data !== 'object') return null
 
-  // Cliente padrao: { data: { token } }.
+  // Cliente padrao (metodo token() do plugin JWT): { data: { token } }.
   if ('token' in data && typeof data.token === 'string') {
     return data.token
   }
 
-  // Formato observado em runtime do adapter atual: { data: { session: { token }, user } },
-  // o mesmo shape documentado para SupabaseAuthAdapter() (getSession().data.session.access_token).
+  // Objeto de sessao do getSession(): { data: { session: { token }, user } }. E o shape de onde
+  // a propria lib extrai o JWT internamente (getJWTToken le session.data.session.token, o token
+  // injetado pelo header set-auth-jwt). Mantido como fallback defensivo porque o adapter em
+  // runtime ja devolveu esse formato a partir de token().
   if ('session' in data && data.session && typeof data.session === 'object' && 'token' in data.session) {
     return typeof data.session.token === 'string' ? data.session.token : null
   }
@@ -106,7 +110,13 @@ export function AuthProvider({
       }
     : null
 
-  const status = sessao.isPending ? 'carregando' : usuario ? 'autenticado' : 'anonimo'
+  const status: AuthContextValue['status'] = sessao.isPending
+    ? 'carregando'
+    : usuario
+      ? 'autenticado'
+      : sessao.error
+        ? 'erro'
+        : 'anonimo'
 
   const entrar = useCallback(async (email: string, senha: string) => {
     verificarErro(await clienteAtual.signIn.email({ email, password: senha }))
@@ -124,9 +134,13 @@ export function AuthProvider({
     return extrairToken(await clienteAtual.token())
   }, [clienteAtual])
 
+  const recarregarSessao = useCallback(async () => {
+    await sessao.refetch?.()
+  }, [sessao])
+
   return (
     <AuthContext.Provider
-      value={{ status, usuario, entrar, cadastrar, sair, obterToken }}
+      value={{ status, usuario, entrar, cadastrar, sair, obterToken, recarregarSessao }}
     >
       {children}
     </AuthContext.Provider>

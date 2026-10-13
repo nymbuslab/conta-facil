@@ -13,7 +13,19 @@ type OpcoesAuthMiddleware = {
   verificarToken?: (token: string) => Promise<PayloadVerificado>
 }
 
-class ConfiguracaoAuthAusente extends Error {}
+export class ConfiguracaoAuthAusente extends Error {}
+
+/** Codigos do `jose` que indicam que o proprio token/JWT e invalido, expirado ou nao
+ * corresponde a nenhuma chave do JWKS — o cliente precisa se reautenticar (401). */
+const CODIGOS_TOKEN_INVALIDO = /^ERR_(JWT|JWS)|^ERR_JWKS_(NO_MATCHING_KEY|MULTIPLE_MATCHING_KEYS)/
+
+/** Diferencia "token invalido" (401) de indisponibilidade do servico de autenticacao
+ * (JWKS fora do ar, erro de rede) — a segunda e transitoria e nao deve ser tratada como
+ * sessao encerrada. */
+function ehTokenInvalido(falha: unknown) {
+  const codigo = (falha as { code?: unknown } | null)?.code
+  return typeof codigo === 'string' && CODIGOS_TOKEN_INVALIDO.test(codigo)
+}
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null
 let jwksUrlAtual: string | null = null
@@ -58,7 +70,10 @@ export function criarAuthMiddleware(
       if (falha instanceof ConfiguracaoAuthAusente) {
         return contexto.json({ erro: 'Servico de autenticacao mal configurado' }, 500)
       }
-      return contexto.json({ erro: 'Não autorizado' }, 401)
+      if (ehTokenInvalido(falha)) {
+        return contexto.json({ erro: 'Não autorizado' }, 401)
+      }
+      return contexto.json({ erro: 'Servico de autenticacao indisponivel' }, 503)
     }
 
     contexto.set('userId', userId)

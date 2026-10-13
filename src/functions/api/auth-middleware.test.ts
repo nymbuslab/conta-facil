@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describe, expect, it, vi } from 'vitest'
 
-import { criarAuthMiddleware, type VariaveisAuth } from './auth-middleware'
+import { ConfiguracaoAuthAusente, criarAuthMiddleware, type VariaveisAuth } from './auth-middleware'
 
 function criarApp(verificarToken?: (token: string) => Promise<{ sub?: string }>) {
   const app = new Hono<{ Variables: VariaveisAuth }>()
@@ -40,5 +40,50 @@ describe('authMiddleware', () => {
     })
 
     expect(resposta.status).toBe(401)
+  })
+
+  it('responde 401 quando o token e invalido/expirado (codigo do jose)', async () => {
+    const app = criarApp(async () => {
+      throw Object.assign(new Error('jwt expired'), { code: 'ERR_JWT_EXPIRED' })
+    })
+    const resposta = await app.request('/dados/usuario', {
+      headers: { Authorization: 'Bearer jwt-expirado' },
+    })
+
+    expect(resposta.status).toBe(401)
+    expect(await resposta.json()).toEqual({ erro: 'Não autorizado' })
+  })
+
+  it('responde 503 quando o JWKS/servico de autenticacao esta indisponivel', async () => {
+    const app = criarApp(async () => {
+      throw Object.assign(new Error('jwks timeout'), { code: 'ERR_JWKS_TIMEOUT' })
+    })
+    const resposta = await app.request('/dados/usuario', {
+      headers: { Authorization: 'Bearer jwt-qualquer' },
+    })
+
+    expect(resposta.status).toBe(503)
+  })
+
+  it('responde 503 em falha de rede (erro sem codigo do jose)', async () => {
+    const app = criarApp(async () => {
+      throw new TypeError('fetch failed')
+    })
+    const resposta = await app.request('/dados/usuario', {
+      headers: { Authorization: 'Bearer jwt-qualquer' },
+    })
+
+    expect(resposta.status).toBe(503)
+  })
+
+  it('responde 500 quando a configuracao do Neon Auth esta ausente', async () => {
+    const app = criarApp(async () => {
+      throw new ConfiguracaoAuthAusente('Variaveis do Neon Auth nao configuradas')
+    })
+    const resposta = await app.request('/dados/usuario', {
+      headers: { Authorization: 'Bearer jwt-qualquer' },
+    })
+
+    expect(resposta.status).toBe(500)
   })
 })
