@@ -86,18 +86,16 @@ export function criarExecutorIdempotencia(
   ): Promise<ResultadoIdempotencia> {
     const hashRequisicao = calcularHashRequisicao(entrada.payload)
 
-    return armazenamento.transacionar(async (transacao) => {
+    const resultado = await armazenamento.transacionar(async (transacao) => {
       await transacao.bloquear(entrada.userId, entrada.chave)
       const existente = await transacao.buscar(entrada.userId, entrada.chave)
 
       if (existente) {
         if (existente.operacao !== entrada.operacao || existente.hashRequisicao !== hashRequisicao) {
-          registrar({ evento: 'idempotencia', operacao: entrada.operacao, resultado: 'conflito', replay: false })
-          return { tipo: 'conflito' }
+          return { tipo: 'conflito' as const }
         }
-        registrar({ evento: 'idempotencia', operacao: entrada.operacao, resultado: 'replay', replay: true })
         return {
-          tipo: 'replay',
+          tipo: 'replay' as const,
           status: existente.statusResposta,
           corpo: existente.corpoResposta,
         }
@@ -112,9 +110,24 @@ export function criarExecutorIdempotencia(
         statusResposta: resposta.status,
         corpoResposta: resposta.corpo,
       })
-      registrar({ evento: 'idempotencia', operacao: entrada.operacao, resultado: 'executada', replay: false })
-      return { tipo: 'executada', ...resposta }
+      return { tipo: 'executada' as const, ...resposta }
     })
+
+    // Registrado so apos transacionar() resolver: o commit ja foi confirmado pelo Postgres,
+    // entao o log nunca diverge de uma falha de commit que o callback nao chegaria a ver.
+    const resultadoPorTipo = {
+      conflito: 'conflito',
+      replay: 'replay',
+      executada: 'executada',
+    } as const
+    registrar({
+      evento: 'idempotencia',
+      operacao: entrada.operacao,
+      resultado: resultadoPorTipo[resultado.tipo],
+      replay: resultado.tipo === 'replay',
+    })
+
+    return resultado
   }
 }
 
