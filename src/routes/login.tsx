@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
+import { MarcaDestaque } from '@/components/marca-destaque'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -44,7 +45,8 @@ export function TelaLogin() {
   }
 
   return (
-    <main className="flex min-h-[calc(100dvh-48px)] items-center justify-center px-4 py-10">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-4 py-10">
+      <MarcaDestaque />
       <Card className="w-full max-w-sm shadow-md">
         <CardHeader className="space-y-2 text-center">
           <CardTitle className="font-display text-2xl">
