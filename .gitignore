@@ -37,3 +37,6 @@ docs/eventos/
 .expx/estado.json
 .neon
 .playwright-mcp/
+
+# Deploy — estado local (SHA do ultimo deploy da Function)
+.deploy-state.json

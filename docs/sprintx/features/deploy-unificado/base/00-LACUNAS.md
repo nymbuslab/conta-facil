@@ -1,0 +1,6 @@
+# Lacunas
+
+- Como verificar programaticamente que a instância NOVA da Function assumiu após o deploy (distinguir versão nova da antiga via HTTP ou CLI) — procurado em `.claude/skills/neon/SKILL.md` e `.claude/skills/neon-functions/`; NÃO DOCUMENTADO. Mitigação: espera fixa + health check com retry, sem garantia de versão (área: `neon-cli-deploy.md`).
+- Formato de saída do `neon status` para leitura programática da branch linkada — procurado em `.claude/skills/neon/SKILL.md`; NÃO DOCUMENTADO. Mitigação: ler o arquivo `.neon` direto (formato JSON confirmado no projeto) (área: `neon-cli-deploy.md`).
+- Verificação pós-push do build do Cloudflare Pages (saber se o build passou e a versão nova está no ar) — procurado em `CLAUDE.md` e nos artefatos do rollout; NÃO DOCUMENTADO. Mitigação: o comando informa que o build foi disparado e onde conferir; um 200 no domínio não distingue versão nova da antiga (área: `frontend-cloudflare-pages.md`).
+- Comando para listar migrations pendentes sem aplicar (equivalente a `migrate:status`) — procurado em `package.json` e `drizzle.config.ts`; NÃO DOCUMENTADO. Mitigação: detectar migrations novas via `git diff` desde o último deploy (área: `drizzle-migrate-production.md`).
