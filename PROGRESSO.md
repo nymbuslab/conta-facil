@@ -8,10 +8,10 @@ Nenhum item em andamento.
 
 ## 📋 Próximos Passos
 
-- [ ] (P1) Fazer o rollout da idempotência em `production`: preparar rollback, aplicar
-  `drizzle/0001_idempotencia.sql`, publicar a Neon Function antes do frontend e validar o golden
-  path real de lançamento, depósito, resgate, repetição e conflito. Produção não foi alterada
-  nesta entrega e esse passo exige autorização específica
+- [ ] (P2) Verificar o replay de `Idempotency-Key` (mesma chave repetida) e o 409 por reuso com
+  payload diferente direto contra a Function de `production` — a validação pós-deploy cobriu só
+  escrita normal (vários lançamentos reais sem duplicação), não esse comportamento específico, que
+  exige uma chamada manual deliberada contra o endpoint real
 - [ ] (P2) Acompanhar os 4 alertas moderados da cadeia de desenvolvimento
   `drizzle-kit -> @esbuild-kit -> esbuild` e atualizar quando existir versão compatível
   comprovada, sem `--force`, override transitivo ou downgrade
@@ -95,3 +95,10 @@ Nenhum item em andamento.
   `scripts/deploy.mjs` (roda antes do gate de migration e do deploy da Function, inclusive em
   `--sim`), e cobrindo o caso de token ausente/malformado que faltava em `extrairToken`. Build,
   lint e 179 testes verdes (5 novos) — 2026-10-12
+- [x] Rollout da idempotência financeira em `production`: migration
+  `drizzle/0001_idempotencia.sql` aplicada (via branch temporária validada antes), Function
+  implantada (`npm run deploy`, health check 200, push confirmado), golden path de escrita
+  validado manualmente em produção (vários lançamentos reais, sem duplicação) — 2026-10-13 (o
+  comportamento específico de replay de `Idempotency-Key` e o 409 por reuso não foram
+  reexercitados contra produção; já estavam provados antes do deploy pelos testes de integração
+  na branch `test`)

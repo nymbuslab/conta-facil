@@ -2,6 +2,11 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-13 — Idempotência na escrita financeira em produção
+
+- Lançamentos, depósitos e resgates agora podem ser repetidos com segurança: em caso de
+  falha de rede, a mesma operação não gera duplicata.
+
 ## 2026-10-11 — Conta Fácil no ar
 
 - O app está em produção em `https://contafacil.nymbuslab.com.br`, com os mesmos dados reais e

@@ -96,8 +96,10 @@ listar — "Guardado" (caixinhas) é saldo corrido, não entra nesse filtro.
   envia uma UUID por operação e repete no máximo uma vez apenas falha de rede, 502, 503 ou 504.
   A Function usa chave única por usuário, hash canônico e trava transacional; mutação e resposta
   idempotente são confirmadas juntas. Reuso com operação ou payload diferente retorna 409 e os
-  logs não incluem descrição, payload ou valor. Migration `drizzle/0001_idempotencia.sql`; testes
-  reais somente na branch `test` até o rollout de `production` ser autorizado.
+  logs não incluem descrição, payload ou valor. Migration `drizzle/0001_idempotencia.sql`;
+  implantada em `production` desde 2026-10-13 (golden path de escrita validado manualmente; o
+  replay da chave e o 409 por reuso continuam provados só pelos testes de integração na branch
+  `test`).
 - **Domínio confiável do Neon Auth**: toda branch nova precisa ter o domínio do frontend
   registrado via `add_auth_trusted_domain` (MCP do Neon) ou no console — sem isso, `sign-up`/
   `sign-in` tomam `403` mesmo com CORS da Function liberado, porque é uma allowlist separada do

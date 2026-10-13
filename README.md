@@ -59,6 +59,7 @@ negócio e a Function `api` implantados, o frontend é publicado no Cloudflare P
 path autenticado foi validado de ponta a ponta contra o domínio real. O procedimento de rollback
 por Instant Restore está documentado em `docs/sprintx/features/rollout-neon-production/ROLLBACK.md`.
 
-A idempotência financeira está implementada e validada na branch Neon de teste, mas a migration
-e a nova Function ainda não foram implantadas em `production`. O rollout permanece como P1 no
-`ROADMAP.md` e exige autorização específica.
+A idempotência financeira está implementada e implantada em `production` desde 2026-10-13:
+migration e Function publicadas, golden path de escrita validado manualmente. O replay de
+`Idempotency-Key` e o 409 por reuso continuam provados pelos testes de integração na branch
+`test`; reexercitá-los direto contra `production` é item aberto no `PROGRESSO.md`.

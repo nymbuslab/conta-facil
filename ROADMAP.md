@@ -11,12 +11,13 @@ Login e cadastro usam Neon Managed Auth. Lançamentos e caixinhas são persistid
 Postgres por uma Neon Function autenticada, com isolamento por usuário. A aplicação está em
 produção: branch Neon `production` com schema de negócio e Function implantados, frontend
 publicado no Cloudflare Pages em `https://contafacil.nymbuslab.com.br` com deploy contínuo a
-partir do push em `master`, golden path validado de ponta a ponta.
+partir do push em `master`, golden path validado de ponta a ponta. A idempotência financeira
+(lançamentos, depósito e resgate) também está implantada em `production` desde 2026-10-13.
 
 ## Prioridades
 
-- **P1** — fazer o rollout controlado da idempotência financeira em `production`: migration,
-  Function antes do frontend, rollback preparado e golden path real
+- **P2** — verificar o replay de `Idempotency-Key` e o 409 por reuso direto contra a Function de
+  `production`, já que a validação pós-deploy cobriu só escrita normal
 - **P2** — atualizar a cadeia transitiva do Drizzle Kit quando houver correção compatível para
   os 4 alertas moderados residuais, sem `--force` ou downgrade
 - **P2** — definir retenção dos registros de idempotência e automatizar o teardown de usuários e
