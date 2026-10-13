@@ -23,8 +23,14 @@ function ConteudoRaiz() {
   if (status === 'carregando') {
     return (
       <>
-        <TopoMarca />
-        <main className="flex min-h-[calc(100dvh-48px)] items-center justify-center px-4">
+        {!rotaPublica && <TopoMarca />}
+        <main
+          className={
+            rotaPublica
+              ? 'flex min-h-dvh items-center justify-center px-4'
+              : 'flex min-h-[calc(100dvh-48px)] items-center justify-center px-4'
+          }
+        >
           <p role="status" className="text-sm text-muted-foreground">
             Carregando sua conta...
           </p>
@@ -36,8 +42,14 @@ function ConteudoRaiz() {
   if (status === 'erro') {
     return (
       <>
-        <TopoMarca />
-        <main className="flex min-h-[calc(100dvh-48px)] items-center justify-center px-4">
+        {!rotaPublica && <TopoMarca />}
+        <main
+          className={
+            rotaPublica
+              ? 'flex min-h-dvh items-center justify-center px-4'
+              : 'flex min-h-[calc(100dvh-48px)] items-center justify-center px-4'
+          }
+        >
           <div className="flex max-w-sm flex-col items-center gap-4 text-center">
             <p role="alert" className="text-sm text-muted-foreground">
               Não foi possível verificar sua sessão. Verifique sua conexão e tente novamente.
@@ -59,7 +71,7 @@ function ConteudoRaiz() {
 
   return (
     <>
-      <TopoMarca />
+      {!rotaPublica && <TopoMarca />}
       <Outlet />
       {status === 'autenticado' ? <BottomNav /> : null}
     </>
