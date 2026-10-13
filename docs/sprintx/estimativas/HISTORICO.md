@@ -3,7 +3,7 @@ expx_schema: 1
 expx_tool: sprintx
 kind: estimativa_historico
 trabalho_id: null
-atualizado_em: 2026-10-11
+atualizado_em: 2026-10-12
 unidade: h
 entradas:
   - trabalho_id: navegacao-inferior
@@ -413,21 +413,186 @@ entradas:
     real: 0.2
     desvio: null
     registrado_em: 2026-10-11
+  - trabalho_id: seguranca-dependencias
+    task_id: T-01.01
+    tipo_task: infra
+    area: portao automatizado do npm audit
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.2
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: seguranca-dependencias
+    task_id: T-01.02
+    tipo_task: teste
+    area: baseline visual Tailwind 3
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.8
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: seguranca-dependencias
+    task_id: T-02.01
+    tipo_task: refatoracao
+    area: migracao Tailwind 4 e Vite
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 1.0
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: seguranca-dependencias
+    task_id: T-02.02
+    tipo_task: infra
+    area: atualizacao segura da arvore npm
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.5
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: seguranca-dependencias
+    task_id: T-02.03
+    tipo_task: teste
+    area: validacao visual Tailwind 4
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 1.2
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: seguranca-dependencias
+    task_id: T-03.01
+    tipo_task: teste
+    area: CSS compilado do Vite
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: seguranca-dependencias
+    task_id: T-03.02
+    tipo_task: teste
+    area: convergencia visual contra DOM original
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.8
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: idempotencia-escrita-financeira
+    task_id: T-01.01
+    tipo_task: teste
+    area: fixtures idempotentes
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: idempotencia-escrita-financeira
+    task_id: T-02.01
+    tipo_task: infra
+    area: schema e migration de idempotencia
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.8
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: idempotencia-escrita-financeira
+    task_id: T-02.02
+    tipo_task: dominio
+    area: executor transacional idempotente
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 1.3
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: idempotencia-escrita-financeira
+    task_id: T-02.03
+    tipo_task: dominio
+    area: idempotencia de lancamentos
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.9
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: idempotencia-escrita-financeira
+    task_id: T-02.04
+    tipo_task: dominio
+    area: idempotencia de caixinhas
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.9
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: idempotencia-escrita-financeira
+    task_id: T-02.05
+    tipo_task: dominio
+    area: cliente HTTP com retry idempotente
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.8
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: idempotencia-escrita-financeira
+    task_id: T-02.06
+    tipo_task: dominio
+    area: contextos financeiros idempotentes
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.7
+    desvio: null
+    registrado_em: 2026-10-12
+  - trabalho_id: idempotencia-escrita-financeira
+    task_id: T-02.07
+    tipo_task: teste
+    area: concorrencia e rollback no Neon test
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 1.2
+    desvio: null
+    registrado_em: 2026-10-12
 calibracao:
   - tipo_task: infra
-    entradas: 10
+    entradas: 13
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: teste
-    entradas: 2
+    entradas: 8
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: refatoracao
-    entradas: 1
+    entradas: 2
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: dominio
-    entradas: 6
+    entradas: 11
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: ui
@@ -501,7 +666,29 @@ feature) e não entram aqui — task bloqueada não tem `real` completo.
 | rollout-neon-production | T-05.02 | documentacao | verificação (convergência rodada 1) | 0,2 h |
 | rollout-neon-production | T-05.03 | documentacao | rollback (convergência rodada 1) | 0,2 h |
 
-**Total:** 37 tasks, 16,7 h de esforço real registrado.
+## Entradas — seguranca-dependencias e idempotencia-escrita-financeira (F6, sem F3.5)
+
+Os dois trabalhos foram executados sem estimativa F3.5. As entradas registram somente esforço real para comparação futura.
+
+| Trabalho | Task | Tipo | Área | Real |
+|---|---|---|---|---|
+| seguranca-dependencias | T-01.01 | infra | portão automatizado do npm audit | 0,2 h |
+| seguranca-dependencias | T-01.02 | teste | baseline visual Tailwind 3 | 0,8 h |
+| seguranca-dependencias | T-02.01 | refatoracao | migração Tailwind 4 e Vite | 1,0 h |
+| seguranca-dependencias | T-02.02 | infra | atualização segura da árvore npm | 0,5 h |
+| seguranca-dependencias | T-02.03 | teste | validação visual Tailwind 4 | 1,2 h |
+| seguranca-dependencias | T-03.01 | teste | CSS compilado do Vite | 0,4 h |
+| seguranca-dependencias | T-03.02 | teste | convergência visual contra DOM original | 0,8 h |
+| idempotencia-escrita-financeira | T-01.01 | teste | fixtures idempotentes | 0,3 h |
+| idempotencia-escrita-financeira | T-02.01 | infra | schema e migration de idempotência | 0,8 h |
+| idempotencia-escrita-financeira | T-02.02 | dominio | executor transacional idempotente | 1,3 h |
+| idempotencia-escrita-financeira | T-02.03 | dominio | idempotência de lançamentos | 0,9 h |
+| idempotencia-escrita-financeira | T-02.04 | dominio | idempotência de caixinhas | 0,9 h |
+| idempotencia-escrita-financeira | T-02.05 | dominio | cliente HTTP com retry idempotente | 0,8 h |
+| idempotencia-escrita-financeira | T-02.06 | dominio | contextos financeiros idempotentes | 0,7 h |
+| idempotencia-escrita-financeira | T-02.07 | teste | concorrência e rollback no Neon test | 1,2 h |
+
+**Total:** 52 tasks, 28,5 h de esforço real registrado.
 
 ## Calibração por tipo de task
 
@@ -512,10 +699,10 @@ só para contar quantas tasks de cada tipo já têm `real` registrado. `fator_at
 
 | Tipo de task | Entradas | Desvio médio | Fator ativo? |
 |---|---|---|---|
-| infra | 10 | não calculável (sem estimativa) | não |
-| teste | 2 | não calculável (sem estimativa) | não |
-| refatoracao | 1 | não calculável (sem estimativa) | não |
-| dominio | 6 | não calculável (sem estimativa) | não |
+| infra | 13 | não calculável (sem estimativa) | não |
+| teste | 8 | não calculável (sem estimativa) | não |
+| refatoracao | 2 | não calculável (sem estimativa) | não |
+| dominio | 11 | não calculável (sem estimativa) | não |
 | ui | 13 | não calculável (sem estimativa) | não |
 | documentacao | 5 | não calculável (sem estimativa) | não |
 

@@ -4,26 +4,34 @@
 
 ## 🔄 Em Andamento
 
-_(nada no momento)_
+Nenhum item em andamento.
 
 ## 📋 Próximos Passos
 
-- [ ] (P1) Revisar os alertas do `npm audit` e atualizar dependências sem quebra
-- [ ] (P2) Confirmar com a documentação oficial do Neon Auth (ou suporte) se `data.session.token`
-  é o formato oficial do `.token()` do adapter atual, ou se há versão mais nova que devolve
-  `data.token` direto — `extrairToken` (`src/state/auth-context.tsx`) hoje aceita os dois por
-  segurança, mas a doc da skill (`base/neon-auth.md`) documentava só `data.token`
-- [ ] (P1) Idempotência de escrita financeira: `POST /lancamentos` e `/caixinhas/:id/depositar|resgatar`
-  não têm chave de idempotência — uma resposta perdida e repetida pelo cliente pode duplicar
-  lançamento ou aplicar o depósito/resgate duas vezes (achado do cross-review de 2026-10-10,
-  não corrigido por exigir migration de schema)
-- [ ] (P2) `auth-context`/`auth-middleware` tratam qualquer falha de verificação do JWT (token
-  inválido, JWKS fora do ar, rede) como "não autenticado", sem um estado de erro de sessão
-  distinto com nova tentativa — achado do cross-review de 2026-10-10, não corrigido por exigir
-  um novo estado no `status` de `useAuth` e nas telas que o consomem
+- [ ] (P1) Fazer o rollout da idempotência em `production`: preparar rollback, aplicar
+  `drizzle/0001_idempotencia.sql`, publicar a Neon Function antes do frontend e validar o golden
+  path real de lançamento, depósito, resgate, repetição e conflito. Produção não foi alterada
+  nesta entrega e esse passo exige autorização específica
+- [ ] (P2) Acompanhar os 4 alertas moderados da cadeia de desenvolvimento
+  `drizzle-kit -> @esbuild-kit -> esbuild` e atualizar quando existir versão compatível
+  comprovada, sem `--force`, override transitivo ou downgrade
+- [ ] (P2) Definir política de retenção e limpeza dos registros de `idempotencias`; a primeira
+  versão mantém os registros sem expiração porque o volume atual é baixo
+- [ ] (P2) Reforçar `garantirBranchDeTeste()` cruzando `NEON_BRANCH` com a identidade real da
+  conexão antes de DDL ou escrita, para detectar `.env.test.local` incoerente
+- [ ] (P2) Automatizar o teardown de usuários e dados descartáveis criados pelas integrações e
+  pela fixture visual na branch Neon de teste
+- [ ] (P2) Emitir o evento de idempotência `resultado: executada` somente depois da confirmação
+  do commit; hoje ele é registrado dentro do callback transacional e pode divergir numa falha
+  rara de commit, sem risco de duplicar a operação
 
 ## ✅ Concluído
 
+- [x] Parcelamento inverte o input: usuário informa o valor da parcela, não o total — a Function
+  multiplica pela quantidade (120 × 10 = R$ 1.200,00). Validado em produção via browser real,
+  depois de corrigir duas pendências de deploy encontradas no processo: a Neon Function precisa
+  de `neon deploy` manual (o push só atualiza o frontend) e `VITE_NEON_AUTH_BASE_URL` faltava nas
+  env vars de build do Cloudflare Pages — 2026-10-11
 - [x] Rollout para `production`: migration aplicada (`lancamentos`/`caixinhas`), Function `api`
   implantada com CORS liberado para `contafacil.nymbuslab.com.br`, frontend publicado no
   Cloudflare Pages com o domínio final no ar, e golden path real validado de ponta a ponta
@@ -54,3 +62,36 @@ _(nada no momento)_
   estática (cross-review) não pegava: extração do token de auth quebrava toda a carga de dados
   após o login (formato real `data.session.token`, não `data.token`), e valor cortado no card
   de Despesa no mobile — 2026-10-10
+- [x] Segurança de dependências: auditoria automatizada fail-closed, árvore npm atualizada sem
+  quebra e Tailwind 3 migrado para Tailwind 4 com plugin Vite e tema CSS-first. Resultado final:
+  0 alertas altos, 0 críticos e 4 moderados documentados do Drizzle Kit; build, 125 testes e
+  16 pares visuais mobile/desktop aprovados com delta de 0 px — 2026-10-12
+- [x] Idempotência de escrita financeira implementada em `POST /lancamentos`, depositar e
+  resgatar: chave isolada por usuário, hash canônico, trava e mutação na mesma transação, replay
+  da resposta, conflito 409 e um único retry transitório no cliente. Migration, concorrência,
+  parcelamento, saldos e rollback validados na branch Neon de teste; produção não foi alterada —
+  2026-10-12
+- [x] Deploy unificado em um comando: `npm run deploy` (`scripts/deploy.mjs`) substitui os dois
+  passos manuais — checa branch/tree/link `.neon`, trata o gate de migration, deploya a Function
+  (`npx neon deploy`) validando `FUNCTION_ALLOWED_ORIGINS`, roda health check com retry e só então
+  faz o push, com modo `--sim` e gates fail-closed. `DEPLOY.md` documenta o que fica fora do
+  script (env vars do Pages, domínio confiável, migration em production). Suíte, build e lint
+  verdes (41 testes novos) — 2026-10-12
+- [x] Estado de erro de sessão distinto com nova tentativa: `useAuth` ganhou `status: 'erro'` (com
+  precedência `carregando` → `autenticado` → `erro` → `anonimo`) e `recarregarSessao()` (chama o
+  `refetch` do adapter). `__root` mostra tela "Não foi possível verificar sua sessão" com botão
+  "Tentar novamente" em vez de redirecionar ao login; o `auth-middleware` passou a separar token
+  inválido/expirado (401) de serviço de auth indisponível — JWKS/rede (503), mantendo 500 para
+  configuração ausente. Suíte/build/lint verdes (174 testes) — 2026-10-12
+- [x] Formato do token do Neon Auth confirmado: `token()` (plugin JWT) devolve `{ data: { token } }`
+  (oficial) e `getSession()` devolve `{ data: { session: { token } } }` — é este o campo que a
+  própria lib lê em `getJWTToken` (header `set-auth-jwt`). `extrairToken` cobre os dois por
+  design; comentário ajustado citando as fontes oficiais — 2026-10-12
+- [x] Revisão cruzada (Codex/OpenCode) das 5 entregas anteriores: idempotência financeira, deploy
+  unificado, estado de erro de sessão e formato do token do Neon Auth convergem com as decisões
+  registradas, sem achado. Segurança de dependências bateu com o `npm audit` real (0 altas/
+  críticas, 4 moderadas do Drizzle Kit), mas o portão `audit:security` não estava amarrado a nada
+  automático — corrigido incorporando a auditoria como passo fail-closed do próprio
+  `scripts/deploy.mjs` (roda antes do gate de migration e do deploy da Function, inclusive em
+  `--sim`), e cobrindo o caso de token ausente/malformado que faltava em `extrairToken`. Build,
+  lint e 179 testes verdes (5 novos) — 2026-10-12

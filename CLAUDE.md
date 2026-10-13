@@ -8,7 +8,8 @@ Repositório: https://github.com/nymbuslab/conta-facil (privado)
 ## Stack
 
 - **React 19** + **Vite** + **TypeScript**, roteamento com **TanStack Router** (rotas em `src/routes/`).
-- **Tailwind CSS** + componentes shadcn/ui-style em `src/components/ui/`, ícones `lucide-react`.
+- **Tailwind CSS 4** + plugin oficial do Vite, componentes shadcn/ui-style em
+  `src/components/ui/` e ícones `lucide-react`.
 - Formulários: **react-hook-form** + **zod** (schemas em `src/types/lancamento.ts`, `src/types/caixinha.ts`).
 - Tabelas: `@tanstack/react-table` via `src/components/data-table.tsx`.
 - Testes: **Vitest** + **Testing Library** (`npm run test`). Build: `npm run build` (roda `tsc -b` antes).
@@ -22,6 +23,9 @@ npm install
 npm run dev      # servidor local
 npm run test     # suíte vitest
 npm run build    # typecheck + build de produção
+npm run audit:security                 # falha em alerta alto/crítico ou erro de rede
+npm run test:migrate                   # aplica migrations somente em test/test-*
+npm run test:integration:idempotencia  # concorrência e rollback no Postgres de teste
 ```
 
 ## Arquitetura
@@ -31,7 +35,7 @@ src/
   routes/          uma rota por tela: index (Início), caixinhas, parcelas, perfil, __root
   components/       componentes de tela + ui/ (primitivas tipo shadcn)
   state/            auth e contextos remotos de lançamentos e caixinhas
-  db/               schema Drizzle de lançamentos e caixinhas
+  db/               schema Drizzle de lançamentos, caixinhas e idempotências
   functions/api/    API Hono autenticada por JWT
   hooks/            use-saldo-acumulado (combina receitas/despesas filtradas + caixinhas)
   lib/              cliente HTTP autenticado, formatters e utilitários de data
@@ -77,6 +81,23 @@ listar — "Guardado" (caixinhas) é saldo corrido, não entra nesse filtro.
   remontados com `key={usuario?.id}` em `__root.tsx` (`ProvedoresDeDados`) a cada troca de
   sessão — sem isso, uma resposta tardia da sessão anterior poderia aparecer nos dados do
   usuário que entrou depois.
+- **Erro de sessão é distinto de deslogado**: `useAuth` (`src/state/auth-context.tsx`) tem
+  `status: 'carregando' | 'autenticado' | 'anonimo' | 'erro'` — falha transitória de verificação
+  (JWKS fora do ar, rede) vira `'erro'` com `recarregarSessao()` (refetch), e `__root.tsx` mostra
+  tela de nova tentativa em vez de mandar pro login. No backend, `auth-middleware` separa token
+  inválido/expirado (401) de serviço de auth indisponível (503); config ausente segue 500.
+- **Formato do token do Neon Auth**: `cliente.token()` (plugin JWT) devolve `{ data: { token } }`;
+  o objeto de `getSession()` devolve `{ data: { session: { token } } }` — este é o campo que a
+  própria lib lê em `getJWTToken` (JWT injetado via header `set-auth-jwt`). `extrairToken`
+  (`src/state/auth-context.tsx`) aceita os dois formatos de propósito; não "simplificar" para um
+  só sem confirmar o adapter em uso.
+- **Idempotência financeira**: criação de lançamentos, depósito e resgate aceitam
+  `Idempotency-Key`. A chave é opcional no backend durante o rollout, mas o frontend novo sempre
+  envia uma UUID por operação e repete no máximo uma vez apenas falha de rede, 502, 503 ou 504.
+  A Function usa chave única por usuário, hash canônico e trava transacional; mutação e resposta
+  idempotente são confirmadas juntas. Reuso com operação ou payload diferente retorna 409 e os
+  logs não incluem descrição, payload ou valor. Migration `drizzle/0001_idempotencia.sql`; testes
+  reais somente na branch `test` até o rollout de `production` ser autorizado.
 - **Domínio confiável do Neon Auth**: toda branch nova precisa ter o domínio do frontend
   registrado via `add_auth_trusted_domain` (MCP do Neon) ou no console — sem isso, `sign-up`/
   `sign-in` tomam `403` mesmo com CORS da Function liberado, porque é uma allowlist separada do
@@ -104,6 +125,22 @@ e Auth; frontend publicado no Cloudflare Pages (projeto `conta-facil`) no domín
 `https://contafacil.nymbuslab.com.br`. Decisões e histórico do rollout em
 `docs/sprintx/features/rollout-neon-production/`.
 
+- **Deploy unificado em um comando**: `npm run deploy` (`scripts/deploy.mjs`) executa os dois
+  passos na ordem certa — checa branch `master`/árvore limpa/link `.neon` em `production`, roda a
+  auditoria de dependências (`audit:security`, aborta em alerta alto/crítico), faz o gate de
+  migration, valida `FUNCTION_ALLOWED_ORIGINS`, roda `npx neon deploy --env`, faz o health check da
+  Function e só então o push. Modo `--sim` (dry-run) roda a auditoria de verdade mas imprime o
+  resto do plano sem executar nada. O checklist do que fica fora do script (env vars do Pages,
+  domínio confiável, migration em production, reposição de `FUNCTION_ALLOWED_ORIGINS`) está em
+  `DEPLOY.md`.
+- **Deploy do backend é separado do deploy do frontend**: `git push` só dispara o build do
+  Cloudflare Pages (frontend). A Neon Function `api` (`src/functions/api/`) **não** é redeployada
+  por push nenhum — toda mudança em código da Function exige `neon deploy --env <arquivo-com-
+  FUNCTION_ALLOWED_ORIGINS>` manual contra a branch `production`. Esquecer esse passo faz o
+  frontend novo rodar contra a Function antiga, sem erro nenhum visível (a chamada responde
+  normal, só com o comportamento de código desatualizado). Depois do `neon deploy`, o deployment
+  novo leva cerca de 1 minuto pra assumir de verdade — uma chamada logo após o deploy ainda pode
+  bater na instância antiga.
 - **Deploy do frontend**: o projeto Cloudflare Pages está conectado ao GitHub
   (`nymbuslab/conta-facil`, branch de produção `master`) — todo push em `master` builda e publica
   sozinho, sem precisar rodar `wrangler pages deploy` na mão. O ambiente padrão de build do

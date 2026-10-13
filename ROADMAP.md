@@ -15,7 +15,14 @@ partir do push em `master`, golden path validado de ponta a ponta.
 
 ## Prioridades
 
-- **P1** — revisar os alertas do `npm audit` e atualizar dependências sem quebra
+- **P1** — fazer o rollout controlado da idempotência financeira em `production`: migration,
+  Function antes do frontend, rollback preparado e golden path real
+- **P2** — atualizar a cadeia transitiva do Drizzle Kit quando houver correção compatível para
+  os 4 alertas moderados residuais, sem `--force` ou downgrade
+- **P2** — definir retenção dos registros de idempotência e automatizar o teardown de usuários e
+  dados descartáveis da branch de teste
+- **P2** — reforçar a trava dos scripts de teste com a identidade real da conexão e mover o log
+  de execução idempotente para depois da confirmação do commit
 
 ## Fora de escopo (por ora)
 
