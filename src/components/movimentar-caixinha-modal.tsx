@@ -82,8 +82,8 @@ export function MovimentarCaixinhaModal({ caixinha, tipo, onOpenChange }: Movime
             />
             {erro && <p className="text-sm font-medium text-destructive">{erro}</p>}
             <DialogFooter>
-              <Button type="submit" className="w-full">
-                Confirmar
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Confirmando...' : 'Confirmar'}
               </Button>
             </DialogFooter>
           </form>

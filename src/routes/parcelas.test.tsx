@@ -2,6 +2,7 @@ import { act, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { ApiClient } from '@/lib/api-client'
+import { adicionarMeses } from '@/lib/datas'
 import { criarClienteLancamentosTeste } from '@/test/api-client-mocks'
 import { renderWithProviders } from '@/test/test-utils'
 import { renderRoute } from '@/test/render-route'
@@ -40,7 +41,7 @@ function Harness() {
           adicionarDespesa({
             descricao: 'Notebook',
             valor: '1.200,00',
-            vencimento: '2026-01-10',
+            vencimento: '2026-10-10',
             parcelado: true,
             quantidadeParcelas: 12,
           })
@@ -54,7 +55,7 @@ function Harness() {
 }
 
 describe('TelaParcelas — cards de parcelamento', () => {
-  it('mostra um card por parcelamentoId quando ha despesas parceladas no estado', async () => {
+  it('mostra um card por parcelamentoId quando um parcelamento e criado', async () => {
     const { getByText, getByRole } = renderWithProviders(<Harness />)
 
     act(() => {
@@ -68,47 +69,21 @@ describe('TelaParcelas — cards de parcelamento', () => {
   })
 
   it('mostra Pago e Falta corretos quando algumas parcelas ja foram pagas', async () => {
-    function HarnessComMarcador() {
-      const { adicionarDespesa, despesas, marcarComoPaga } = useLancamentos()
-      return (
-        <>
-          <button
-            onClick={() =>
-              adicionarDespesa({
-                descricao: 'Notebook',
-                valor: '1.200,00',
-                vencimento: '2026-01-10',
-                parcelado: true,
-                quantidadeParcelas: 12,
-              })
-            }
-          >
-            criar parcelamento
-          </button>
-          <button
-            onClick={() => {
-              despesas
-                .filter((d) => d.descricao === 'Notebook')
-                .slice(0, 3)
-                .forEach((d) => marcarComoPaga(d.id))
-            }}
-          >
-            marcar 3 pagas
-          </button>
-          <TelaParcelas />
-        </>
-      )
-    }
+    const parceladas = Array.from({ length: 12 }, (_, indice) => ({
+      id: `parcela-${indice + 1}`,
+      tipo: 'despesa',
+      descricao: 'Notebook',
+      valor: 10000,
+      dataEmissao: null,
+      vencimento: adicionarMeses('2026-01-10', indice),
+      paga: indice < 3,
+      parcelamentoId: 'parcelamento-1',
+      parcelaAtual: indice + 1,
+      totalParcelas: 12,
+    }))
 
-    const { getByText, getByRole, getAllByText } = renderWithProviders(<HarnessComMarcador />)
-
-    act(() => {
-      getByRole('button', { name: 'criar parcelamento' }).click()
-    })
-    await waitFor(() => expect(getByText('Notebook')).toBeInTheDocument())
-
-    act(() => {
-      getByRole('button', { name: 'marcar 3 pagas' }).click()
+    const { getByText, getAllByText } = renderWithProviders(<TelaParcelas />, {
+      clienteLancamentos: criarClienteLancamentosTeste(parceladas),
     })
 
     await waitFor(() => {

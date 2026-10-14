@@ -35,6 +35,7 @@ export const lancamentos = pgTable(
   },
   (tabela) => [
     index('lancamentos_user_id_idx').on(tabela.userId),
+    index('lancamentos_user_criado_id_idx').on(tabela.userId, tabela.criadoEm, tabela.id),
     check('lancamentos_valor_positivo', sql`${tabela.valor} > 0`),
     check(
       'lancamentos_campos_por_tipo',
@@ -56,6 +57,7 @@ export const caixinhas = pgTable(
   },
   (tabela) => [
     index('caixinhas_user_id_idx').on(tabela.userId),
+    index('caixinhas_user_criado_id_idx').on(tabela.userId, tabela.criadoEm, tabela.id),
     check('caixinhas_valor_guardado_nao_negativo', sql`${tabela.valorGuardado} >= 0`),
     check('caixinhas_meta_positiva', sql`${tabela.meta} > 0`),
   ],

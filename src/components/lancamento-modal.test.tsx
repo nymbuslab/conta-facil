@@ -1,6 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import type { ApiClient } from '@/lib/api-client'
+import { criarClienteLancamentosTeste } from '@/test/api-client-mocks'
 import { renderWithProviders } from '@/test/test-utils'
 import { useLancamentos } from '@/state/lancamentos-context'
 
@@ -45,8 +47,12 @@ describe('LancamentoModal — Despesa parcelada', () => {
     })
   })
 
-  it('submeter com parcelado marcado e quantidade 3 gera 3 despesas no estado', async () => {
-    renderWithProviders(<HarnessComContador />)
+  it('submeter parcelado envia 3 parcelas e lista a do mes vigente', async () => {
+    const base = criarClienteLancamentosTeste()
+    const postIdempotente = vi.fn(base.postIdempotente)
+    renderWithProviders(<HarnessComContador />, {
+      clienteLancamentos: { ...base, postIdempotente } as unknown as ApiClient,
+    })
 
     await waitFor(() => expect(screen.getByTestId('total-despesas')).toHaveTextContent('3'))
 
@@ -65,7 +71,13 @@ describe('LancamentoModal — Despesa parcelada', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Registrar despesa' }))
 
     await waitFor(() => {
-      expect(screen.getByTestId('total-despesas')).toHaveTextContent('6')
+      expect(postIdempotente).toHaveBeenCalledWith('/lancamentos', expect.objectContaining({
+        tipo: 'despesa', descricao: 'Notebook', parcelado: true, quantidadeParcelas: 3,
+      }))
+    })
+    // So a parcela de outubro entra na lista do mes vigente; as demais ficam na tela Parcelas.
+    await waitFor(() => {
+      expect(screen.getByTestId('total-despesas')).toHaveTextContent('4')
     })
   })
 })

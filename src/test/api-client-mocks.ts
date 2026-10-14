@@ -4,6 +4,30 @@ import { lancamentosIniciais } from '@/lib/mock-data'
 
 type Registro = Record<string, unknown>
 
+const LIMITE_MOCK = 20
+
+/** Cursor opaco por deslocamento: o cliente so devolve o token, entao o formato do backend
+ * (keyset por criadoEm/id) nao importa para os testes de UI. */
+function paginar<T>(itens: T[], cursor: string | null) {
+  const inicio = cursor ? Number(atob(cursor)) || 0 : 0
+  const fatia = itens.slice(inicio, inicio + LIMITE_MOCK)
+  const fim = inicio + fatia.length
+  return {
+    itens: fatia,
+    proximoCursor: fim < itens.length ? btoa(String(fim)) : null,
+  }
+}
+
+function parametros(caminho: string) {
+  const indice = caminho.indexOf('?')
+  return new URLSearchParams(indice >= 0 ? caminho.slice(indice + 1) : '')
+}
+
+function mesDoItem(item: Registro) {
+  const data = item.tipo === 'receita' ? item.dataEmissao : item.vencimento
+  return String(data ?? '').slice(0, 7)
+}
+
 function lancamentosApiIniciais() {
   return lancamentosIniciais.map((item) => ({
     ...item,
@@ -17,7 +41,7 @@ function lancamentosApiIniciais() {
   }))
 }
 
-export function criarClienteLancamentosTeste(iniciais = lancamentosApiIniciais()): ApiClient {
+export function criarClienteLancamentosTeste(iniciais: Registro[] = lancamentosApiIniciais()): ApiClient {
   let dados: Registro[] = structuredClone(iniciais)
   let sequencia = 0
 
@@ -43,8 +67,77 @@ export function criarClienteLancamentosTeste(iniciais = lancamentosApiIniciais()
     return structuredClone(criados)
   }
 
+  const listar = (caminho: string) => {
+    const query = parametros(caminho)
+    const tipo = query.get('tipo')
+    const mes = query.get('mes')
+    const busca = (query.get('busca') ?? '').toLowerCase()
+    const filtrados = dados.filter((item) => {
+      if (tipo && item.tipo !== tipo) return false
+      if (mes && mesDoItem(item) !== mes) return false
+      if (busca && !String(item.descricao).toLowerCase().includes(busca)) return false
+      return true
+    })
+    return paginar(filtrados, query.get('cursor'))
+  }
+
+  const resumo = (caminho: string) => {
+    const mes = parametros(caminho).get('mes')
+    let receitas = 0
+    let despesas = 0
+    for (const item of dados) {
+      if (mes && mesDoItem(item) !== mes) continue
+      if (item.tipo === 'receita') receitas += Number(item.valor)
+      else despesas += Number(item.valor)
+    }
+    return { receitas, despesas }
+  }
+
+  const listarParcelamentos = (caminho: string) => {
+    const grupos = new Map<string, {
+      parcelamentoId: string
+      descricao: string
+      totalParcelas: number
+      parcelasPagas: number
+      valorTotal: number
+      valorPago: number
+      indice: number
+    }>()
+
+    dados.forEach((item, indice) => {
+      if (item.tipo !== 'despesa' || !item.parcelamentoId) return
+      const chave = String(item.parcelamentoId)
+      const grupo = grupos.get(chave) ?? {
+        parcelamentoId: chave,
+        descricao: String(item.descricao),
+        totalParcelas: 0,
+        parcelasPagas: 0,
+        valorTotal: 0,
+        valorPago: 0,
+        indice,
+      }
+      grupo.totalParcelas += 1
+      grupo.valorTotal += Number(item.valor)
+      if (item.paga) {
+        grupo.parcelasPagas += 1
+        grupo.valorPago += Number(item.valor)
+      }
+      grupos.set(chave, grupo)
+    })
+
+    const ordenados = [...grupos.values()]
+      .sort((a, b) => b.indice - a.indice)
+      .map(({ indice: _indice, ...resto }) => resto)
+
+    return paginar(ordenados, parametros(caminho).get('cursor'))
+  }
+
   return {
-    get: async () => structuredClone(dados),
+    get: async (caminho: string) => {
+      if (caminho.startsWith('/lancamentos/resumo')) return resumo(caminho)
+      if (caminho.startsWith('/lancamentos/parcelamentos')) return listarParcelamentos(caminho)
+      return listar(caminho)
+    },
     post: criarLancamentos,
     postIdempotente: criarLancamentos,
     patch: async (caminho: string) => {
@@ -59,6 +152,8 @@ export function criarClienteLancamentosTeste(iniciais = lancamentosApiIniciais()
 export function criarClienteCaixinhasTeste(iniciais: Registro[] = []): ApiClient {
   let dados = structuredClone(iniciais)
   let sequencia = 0
+
+  const total = () => dados.reduce((soma, item) => soma + Number(item.valorGuardado ?? 0), 0)
 
   const movimentar = async (caminho: string, corpo?: unknown) => {
     const entrada = corpo as { valor?: number }
@@ -75,7 +170,10 @@ export function criarClienteCaixinhasTeste(iniciais: Registro[] = []): ApiClient
   }
 
   return {
-    get: async () => structuredClone(dados),
+    get: async (caminho: string) => {
+      const pagina = paginar(dados, parametros(caminho).get('cursor'))
+      return { ...pagina, totalGuardado: total() }
+    },
     post: async (caminho: string, corpo?: unknown) => {
       const entrada = corpo as { nome?: string; meta?: number; valor?: number }
       if (caminho === '/caixinhas') {

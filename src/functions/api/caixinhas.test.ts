@@ -1,7 +1,12 @@
 import { Hono } from 'hono'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { criarRotasCaixinhas, type RepositorioCaixinhas } from './caixinhas'
+import {
+  colunasCaixinhaListada,
+  criarRotasCaixinhas,
+  paraCaixinhaListada,
+  type RepositorioCaixinhas,
+} from './caixinhas'
 import { criarExecutorIdempotencia, type RegistroIdempotencia, type TransacaoIdempotencia } from './idempotencia'
 
 const CAIXINHA_ID = '22222222-2222-2222-2222-222222222222'
@@ -18,7 +23,8 @@ function criarRepositorio(): RepositorioCaixinhas {
     atualizadoEm: new Date(),
   })
   return {
-    listar: vi.fn().mockResolvedValue([]),
+    listar: vi.fn().mockResolvedValue({ itens: [], proximoCursor: null }),
+    totalGuardado: vi.fn().mockResolvedValue(1000),
     criar: vi.fn(async () => caixinha()),
     depositar: vi.fn(async (_userId, _id, valor) => {
       valorGuardado += valor
@@ -64,6 +70,29 @@ describe('rotas de caixinhas', () => {
 
   beforeEach(() => {
     repositorio = criarRepositorio()
+  })
+
+  it('lista a página com o total guardado do usuário', async () => {
+    const resposta = await criarApp(repositorio).request('/caixinhas?limite=10')
+
+    expect(resposta.status).toBe(200)
+    expect(await resposta.json()).toEqual({
+      itens: [],
+      proximoCursor: null,
+      totalGuardado: 1000,
+    })
+    expect(repositorio.listar).toHaveBeenCalledWith(
+      'usuario-1',
+      expect.objectContaining({ limite: 10 }),
+    )
+    expect(repositorio.totalGuardado).toHaveBeenCalledWith('usuario-1')
+  })
+
+  it('recusa cursor inválido na listagem', async () => {
+    const resposta = await criarApp(repositorio).request('/caixinhas?cursor=nao-e-base64')
+
+    expect(resposta.status).toBe(400)
+    expect(repositorio.listar).not.toHaveBeenCalled()
   })
 
   it('deposita o valor em centavos na caixinha do usuario autenticado', async () => {
@@ -166,5 +195,48 @@ describe('rotas de caixinhas', () => {
     expect((await criarApp(repositorio, 'usuario-1', executar).request(`/caixinhas/${CAIXINHA_ID}/resgatar`, init)).status).toBe(400)
     expect((await criarApp(repositorio, 'usuario-1', executar).request(`/caixinhas/${CAIXINHA_ID}/depositar`, { ...init, body: JSON.stringify({ valor: 1 }) })).status).toBe(200)
     expect((await criarApp(repositorio).request(`/caixinhas/${CAIXINHA_ID}/depositar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: 1 }) })).status).toBe(200)
+  })
+})
+
+describe('projeção da listagem de caixinhas', () => {
+  it('seleciona só as colunas da tela mais criadoEm para o cursor', () => {
+    expect(Object.keys(colunasCaixinhaListada).sort()).toEqual([
+      'criadoEm',
+      'id',
+      'meta',
+      'nome',
+      'valorGuardado',
+    ])
+  })
+
+  it('nunca expõe userId nem os timestamps internos no item da listagem', () => {
+    const item = paraCaixinhaListada({
+      id: CAIXINHA_ID,
+      nome: 'Reserva',
+      valorGuardado: 1000,
+      meta: 5000,
+      criadoEm: new Date('2026-10-10T00:00:00.000Z'),
+    })
+
+    expect(item).not.toHaveProperty('userId')
+    expect(item).not.toHaveProperty('criadoEm')
+    expect(item).not.toHaveProperty('atualizadoEm')
+    expect(Object.keys(item).sort()).toEqual(['id', 'meta', 'nome', 'valorGuardado'])
+  })
+
+  it('devolve a página inteira em uma listagem por requisição', async () => {
+    const repositorio = criarRepositorio()
+    const itens = Array.from({ length: 8 }, (_, indice) => ({
+      id: `id-${indice}`,
+      nome: `Caixinha ${indice}`,
+      valorGuardado: indice * 100,
+      meta: 5000,
+    }))
+    vi.mocked(repositorio.listar).mockResolvedValue({ itens, proximoCursor: null })
+
+    const resposta = await criarApp(repositorio).request('/caixinhas')
+
+    expect((await resposta.json()).itens).toEqual(itens)
+    expect(repositorio.listar).toHaveBeenCalledTimes(1)
   })
 })

@@ -120,8 +120,8 @@ function FormularioReceita({ onOpenChange }: { onOpenChange: (open: boolean) => 
             )}
           />
           <DialogFooter>
-            <Button type="submit" className="w-full">
-              Registrar receita
+            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? 'Registrando...' : 'Registrar receita'}
             </Button>
           </DialogFooter>
         </form>
@@ -234,8 +234,8 @@ function FormularioDespesa({ onOpenChange }: { onOpenChange: (open: boolean) => 
             )}
           />
           <DialogFooter>
-            <Button type="submit" className="w-full">
-              Registrar despesa
+            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? 'Registrando...' : 'Registrar despesa'}
             </Button>
           </DialogFooter>
         </form>

@@ -9,24 +9,68 @@ import {
   type ReactNode,
 } from 'react'
 
-import { criarApiClient, type ApiClient } from '@/lib/api-client'
+import { criarApiClient, mensagemErroApi, type ApiClient } from '@/lib/api-client'
+import { mesAtual } from '@/lib/datas'
 import { parseValorMonetario } from '@/lib/formatters'
+import { montarUrl } from '@/lib/paginacao'
+import type { GrupoParcelamento } from '@/lib/parcelamento'
 import type { Despesa, DespesaFormValues, Lancamento, Receita, ReceitaFormValues } from '@/types/lancamento'
 
 import { useAuth } from './auth-context'
 
+export interface FiltrosLancamentos {
+  mes: string
+  busca: string
+}
+
+interface PaginaApi<T> {
+  itens: T[]
+  proximoCursor: string | null
+}
+
+interface ResumoApi {
+  receitas: number
+  despesas: number
+}
+
+interface GrupoParcelamentoApi {
+  parcelamentoId: string
+  descricao: string
+  totalParcelas: number
+  parcelasPagas: number
+  valorTotal: number
+  valorPago: number
+}
+
 interface LancamentosContextValue {
-  lancamentos: Lancamento[]
   receitas: Receita[]
   despesas: Despesa[]
   saldoReceita: number
   saldoDespesa: number
   carregando: boolean
   erro: string | null
+  filtros: FiltrosLancamentos
+  definirFiltros: (parcial: Partial<FiltrosLancamentos>) => void
+  temMaisReceitas: boolean
+  temMaisDespesas: boolean
+  carregandoMais: 'receita' | 'despesa' | null
+  erroCarregarMais: string | null
+  carregarMaisReceitas: () => Promise<void>
+  carregarMaisDespesas: () => Promise<void>
   recarregar: () => Promise<void>
   adicionarReceita: (dados: ReceitaFormValues) => Promise<void>
   adicionarDespesa: (dados: DespesaFormValues) => Promise<void>
   marcarComoPaga: (id: string) => Promise<void>
+  parcelamentos: GrupoParcelamento[]
+  carregandoParcelamentos: boolean
+  erroParcelamentos: string | null
+  temMaisParcelamentos: boolean
+  carregandoMaisParcelamentos: boolean
+  /** Muda quando uma despesa parcelada e criada ou paga: a tela Parcelas observa este numero
+   * para recarregar os agregados mesmo se ja estiver montada. */
+  versaoParcelamentos: number
+  carregarParcelamentos: () => Promise<void>
+  carregarMaisParcelamentos: () => Promise<void>
 }
 
 type LancamentoApi = {
@@ -42,14 +86,12 @@ type LancamentoApi = {
   totalParcelas: number | null
 }
 
+type Cursors = { receita: string | null; despesa: string | null }
+
 const LancamentosContext = createContext<LancamentosContextValue | null>(null)
 
 function arredondar(valor: number) {
   return Math.round(valor * 100) / 100
-}
-
-function mensagemErro(erro: unknown) {
-  return erro instanceof Error ? erro.message : 'Nao foi possivel carregar os lancamentos'
 }
 
 function paraLancamento(item: LancamentoApi): Lancamento {
@@ -76,12 +118,35 @@ function paraLancamento(item: LancamentoApi): Lancamento {
   }
 }
 
+function paraGrupo(item: GrupoParcelamentoApi): GrupoParcelamento {
+  const valorTotal = arredondar(item.valorTotal / 100)
+  const valorPago = arredondar(item.valorPago / 100)
+  return {
+    parcelamentoId: item.parcelamentoId,
+    descricao: item.descricao,
+    totalParcelas: item.totalParcelas,
+    parcelasPagas: item.parcelasPagas,
+    valorTotal,
+    valorPago,
+    valorFalta: arredondar(valorTotal - valorPago),
+  }
+}
+
 function ehReceita(lancamento: Lancamento): lancamento is Receita {
   return lancamento.tipo === 'receita'
 }
 
 function ehDespesa(lancamento: Lancamento): lancamento is Despesa {
   return lancamento.tipo === 'despesa'
+}
+
+/** Decide se um lançamento recém-criado entra na lista já visível: só quando casa o mês e a
+ * busca atuais — assim a linha aparece de imediato sem misturar algo fora do filtro. */
+function bateFiltros(item: Lancamento, filtros: FiltrosLancamentos) {
+  const data = item.tipo === 'receita' ? item.dataEmissao : item.vencimento
+  if (data.slice(0, 7) !== filtros.mes) return false
+  const busca = filtros.busca.trim().toLowerCase()
+  return busca === '' || item.descricao.toLowerCase().includes(busca)
 }
 
 export function LancamentosProvider({
@@ -99,53 +164,186 @@ export function LancamentosProvider({
     }),
     [cliente, obterToken],
   )
-  const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
+
+  const [receitas, setReceitas] = useState<Receita[]>([])
+  const [despesas, setDespesas] = useState<Despesa[]>([])
+  const [resumo, setResumo] = useState<ResumoApi>({ receitas: 0, despesas: 0 })
+  const [cursors, setCursors] = useState<Cursors>({ receita: null, despesa: null })
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
+  const [carregandoMais, setCarregandoMais] = useState<'receita' | 'despesa' | null>(null)
+  const [erroCarregarMais, setErroCarregarMais] = useState<string | null>(null)
+  const [filtros, setFiltros] = useState<FiltrosLancamentos>(() => ({ mes: mesAtual(), busca: '' }))
+  const [parcelamentos, setParcelamentos] = useState<GrupoParcelamento[]>([])
+  const [carregandoParcelamentos, setCarregandoParcelamentos] = useState(true)
+  const [erroParcelamentos, setErroParcelamentos] = useState<string | null>(null)
+  const [cursorParcelamentos, setCursorParcelamentos] = useState<string | null>(null)
+  const [carregandoMaisParcelamentos, setCarregandoMaisParcelamentos] = useState(false)
+  const [versaoParcelamentos, setVersaoParcelamentos] = useState(0)
 
-  /** Descarta respostas de uma sessao/usuario que ja nao e o atual: sem isso, uma resposta
-   * atrasada do usuario anterior poderia sobrescrever os dados do usuario que acabou de
-   * entrar (troca de conta no mesmo navegador sem recarregar a pagina). */
+  /** Descarta respostas de uma sessao/usuario/filtro que ja nao e o atual: sem isso, uma
+   * resposta atrasada poderia sobrescrever os dados vigentes (troca de conta ou de filtro). */
   const geracaoAtualRef = useRef(0)
+  /** Muda so quando a sessao deixa de ser autenticada: os agregados de parcelamento nao
+   * dependem do filtro de mes/busca, entao uma troca de filtro nao pode descartar a resposta
+   * deles (o carregamento da tela Parcelas comecaria antes da sessao assentar). */
+  const sessaoAtualRef = useRef(0)
+  const estaveisAutenticadoRef = useRef(false)
+  const filtrosRef = useRef(filtros)
+  const cursorsRef = useRef(cursors)
+  const cursorParcelamentosRef = useRef<string | null>(null)
+  const carregandoMaisRef = useRef(false)
+  const carregandoParcelamentosRef = useRef(false)
+  const carregandoMaisParcelamentosRef = useRef(false)
 
-  const recarregar = useCallback(async () => {
-    const minhaGeracao = ++geracaoAtualRef.current
-    setCarregando(true)
-    setErro(null)
-    setLancamentos([])
-    try {
-      const dados = await clienteAtual.get<LancamentoApi[]>('/lancamentos')
-      if (geracaoAtualRef.current !== minhaGeracao) return
-      setLancamentos(dados.map(paraLancamento))
-    } catch (falha) {
-      if (geracaoAtualRef.current !== minhaGeracao) return
-      setErro(mensagemErro(falha))
-    } finally {
-      if (geracaoAtualRef.current === minhaGeracao) setCarregando(false)
-    }
-  }, [clienteAtual])
+  const invalidarParcelamentos = useCallback(() => {
+    setVersaoParcelamentos((atual) => atual + 1)
+  }, [])
+
+  useEffect(() => {
+    filtrosRef.current = filtros
+  }, [filtros])
+
+  const carregarPrimeiraPagina = useCallback(
+    async (filtrosAtuais: FiltrosLancamentos, limpar: boolean) => {
+      if (limpar) {
+        setReceitas([])
+        setDespesas([])
+        setResumo({ receitas: 0, despesas: 0 })
+        cursorsRef.current = { receita: null, despesa: null }
+        setCursors(cursorsRef.current)
+      }
+
+      const minhaGeracao = ++geracaoAtualRef.current
+      setCarregando(true)
+      setErro(null)
+      setErroCarregarMais(null)
+
+      try {
+        const [paginaReceitas, paginaDespesas, resumoAtual] = await Promise.all([
+          clienteAtual.get<PaginaApi<LancamentoApi>>(montarUrl('/lancamentos', {
+            tipo: 'receita', mes: filtrosAtuais.mes, busca: filtrosAtuais.busca,
+          })),
+          clienteAtual.get<PaginaApi<LancamentoApi>>(montarUrl('/lancamentos', {
+            tipo: 'despesa', mes: filtrosAtuais.mes, busca: filtrosAtuais.busca,
+          })),
+          clienteAtual.get<ResumoApi>(montarUrl('/lancamentos/resumo', { mes: filtrosAtuais.mes })),
+        ])
+        if (geracaoAtualRef.current !== minhaGeracao) return
+
+        setReceitas(paginaReceitas.itens.map(paraLancamento).filter(ehReceita))
+        setDespesas(paginaDespesas.itens.map(paraLancamento).filter(ehDespesa))
+        const proximosCursors = {
+          receita: paginaReceitas.proximoCursor,
+          despesa: paginaDespesas.proximoCursor,
+        }
+        cursorsRef.current = proximosCursors
+        setCursors(proximosCursors)
+        setResumo(resumoAtual)
+      } catch (falha) {
+        if (geracaoAtualRef.current !== minhaGeracao) return
+        setErro(mensagemErroApi(falha, 'Nao foi possivel carregar os lancamentos'))
+      } finally {
+        if (geracaoAtualRef.current === minhaGeracao) setCarregando(false)
+      }
+    },
+    [clienteAtual],
+  )
+
+  const recarregar = useCallback(
+    () => carregarPrimeiraPagina(filtrosRef.current, false),
+    [carregarPrimeiraPagina],
+  )
+
+  const definirFiltros = useCallback(
+    (parcial: Partial<FiltrosLancamentos>) => {
+      const atuais = filtrosRef.current
+      const proximos = { ...atuais, ...parcial }
+      if (proximos.mes === atuais.mes && proximos.busca === atuais.busca) return
+      filtrosRef.current = proximos
+      setFiltros(proximos)
+      void carregarPrimeiraPagina(proximos, true)
+    },
+    [carregarPrimeiraPagina],
+  )
 
   useEffect(() => {
     if (status !== 'autenticado') {
+      if (estaveisAutenticadoRef.current) sessaoAtualRef.current += 1
+      estaveisAutenticadoRef.current = false
       geracaoAtualRef.current += 1
-      setLancamentos([])
+      setReceitas([])
+      setDespesas([])
+      setResumo({ receitas: 0, despesas: 0 })
+      cursorsRef.current = { receita: null, despesa: null }
+      setCursors(cursorsRef.current)
       setErro(null)
+      setErroCarregarMais(null)
       setCarregando(status === 'carregando')
+      setParcelamentos([])
+      cursorParcelamentosRef.current = null
+      setCursorParcelamentos(null)
       return
     }
-    void recarregar()
-  }, [recarregar, status, usuario?.id])
+    estaveisAutenticadoRef.current = true
+    void carregarPrimeiraPagina(filtrosRef.current, true)
+  }, [carregarPrimeiraPagina, status, usuario?.id])
 
-  const receitas = useMemo(() => lancamentos.filter(ehReceita), [lancamentos])
-  const despesas = useMemo(() => lancamentos.filter(ehDespesa), [lancamentos])
-  const saldoReceita = useMemo(
-    () => arredondar(receitas.reduce((soma, item) => soma + item.valor, 0)),
-    [receitas],
+  const carregarMais = useCallback(
+    async (tipo: 'receita' | 'despesa') => {
+      const cursor = cursorsRef.current[tipo]
+      if (!cursor || carregandoMaisRef.current) return
+
+      const minhaGeracao = geracaoAtualRef.current
+      carregandoMaisRef.current = true
+      setCarregandoMais(tipo)
+      setErroCarregarMais(null)
+
+      try {
+        const pagina = await clienteAtual.get<PaginaApi<LancamentoApi>>(montarUrl('/lancamentos', {
+          tipo,
+          mes: filtrosRef.current.mes,
+          busca: filtrosRef.current.busca,
+          cursor,
+        }))
+        if (geracaoAtualRef.current !== minhaGeracao) return
+
+        const convertidos = pagina.itens.map(paraLancamento)
+        if (tipo === 'receita') setReceitas((atuais) => [...atuais, ...convertidos.filter(ehReceita)])
+        else setDespesas((atuais) => [...atuais, ...convertidos.filter(ehDespesa)])
+
+        setCursors((atuais) => {
+          const proximos = tipo === 'receita'
+            ? { ...atuais, receita: pagina.proximoCursor }
+            : { ...atuais, despesa: pagina.proximoCursor }
+          cursorsRef.current = proximos
+          return proximos
+        })
+      } catch (falha) {
+        if (geracaoAtualRef.current !== minhaGeracao) return
+        setErroCarregarMais(mensagemErroApi(falha, 'Não foi possível carregar mais'))
+      } finally {
+        carregandoMaisRef.current = false
+        if (geracaoAtualRef.current === minhaGeracao) setCarregandoMais(null)
+      }
+    },
+    [clienteAtual],
   )
-  const saldoDespesa = useMemo(
-    () => arredondar(despesas.reduce((soma, item) => soma + item.valor, 0)),
-    [despesas],
-  )
+
+  const carregarMaisReceitas = useCallback(() => carregarMais('receita'), [carregarMais])
+  const carregarMaisDespesas = useCallback(() => carregarMais('despesa'), [carregarMais])
+
+  async function sincronizarResumo() {
+    try {
+      const resumoAtual = await clienteAtual.get<ResumoApi>(
+        montarUrl('/lancamentos/resumo', { mes: filtrosRef.current.mes }),
+      )
+      setResumo(resumoAtual)
+    } catch {
+      // Resumo desatualizado e cosmetico: a proxima recarga corrige sem quebrar a criacao,
+      // que ja foi confirmada pelo servidor.
+    }
+  }
 
   async function adicionarReceita(dados: ReceitaFormValues) {
     const valor = parseValorMonetario(dados.valor)
@@ -156,7 +354,12 @@ export function LancamentosProvider({
       valor: Math.round(valor * 100),
       dataEmissao: dados.dataEmissao,
     })
-    setLancamentos((atuais) => [...atuais, ...criados.map(paraLancamento)])
+    const convertidos = criados.map(paraLancamento).filter(ehReceita)
+    setReceitas((atuais) => [
+      ...atuais,
+      ...convertidos.filter((item) => bateFiltros(item, filtrosRef.current)),
+    ])
+    await sincronizarResumo()
   }
 
   async function adicionarDespesa(dados: DespesaFormValues) {
@@ -170,29 +373,115 @@ export function LancamentosProvider({
       parcelado: dados.parcelado,
       quantidadeParcelas: dados.quantidadeParcelas,
     })
-    setLancamentos((atuais) => [...atuais, ...criados.map(paraLancamento)])
+    const convertidos = criados.map(paraLancamento).filter(ehDespesa)
+    setDespesas((atuais) => [
+      ...atuais,
+      ...convertidos.filter((item) => bateFiltros(item, filtrosRef.current)),
+    ])
+    if (dados.parcelado) invalidarParcelamentos()
+    await sincronizarResumo()
   }
 
   async function marcarComoPaga(id: string) {
-    const atualizado = paraLancamento(
-      await clienteAtual.patch<LancamentoApi>(`/lancamentos/${id}/pagar`),
-    )
-    setLancamentos((atuais) => atuais.map((item) => item.id === id ? atualizado : item))
+    // Optimistic: a linha mostra "Pago" na hora. Em falha, volta ao valor anterior e o
+    // erro sobe para quem chamou (o dialogo).
+    const anterior = despesas.find((item) => item.id === id)
+    setDespesas((atuais) => atuais.map((item) => (item.id === id ? { ...item, paga: true } : item)))
+    try {
+      const convertido = paraLancamento(await clienteAtual.patch<LancamentoApi>(`/lancamentos/${id}/pagar`))
+      if (ehDespesa(convertido)) {
+        setDespesas((atuais) => atuais.map((item) => (item.id === id ? convertido : item)))
+      }
+      // Os agregados de parcelamento (pagas/pago) mudam em qualquer mes: a tela Parcelas
+      // recarrega ao ver a nova versao.
+      invalidarParcelamentos()
+    } catch (falha) {
+      if (anterior) {
+        setDespesas((atuais) => atuais.map((item) => (item.id === id ? anterior : item)))
+      }
+      throw falha
+    }
   }
+
+  const carregarParcelamentos = useCallback(async () => {
+    if (carregandoParcelamentosRef.current) return
+
+    const minhaSessao = sessaoAtualRef.current
+    carregandoParcelamentosRef.current = true
+    setCarregandoParcelamentos(true)
+    setErroParcelamentos(null)
+
+    try {
+      const pagina = await clienteAtual.get<PaginaApi<GrupoParcelamentoApi>>(
+        montarUrl('/lancamentos/parcelamentos', {}),
+      )
+      if (sessaoAtualRef.current !== minhaSessao) return
+      setParcelamentos(pagina.itens.map(paraGrupo))
+      cursorParcelamentosRef.current = pagina.proximoCursor
+      setCursorParcelamentos(pagina.proximoCursor)
+    } catch (falha) {
+      if (sessaoAtualRef.current !== minhaSessao) return
+      setErroParcelamentos(mensagemErroApi(falha, 'Não foi possível carregar os parcelamentos'))
+    } finally {
+      carregandoParcelamentosRef.current = false
+      if (sessaoAtualRef.current === minhaSessao) setCarregandoParcelamentos(false)
+    }
+  }, [clienteAtual])
+
+  const carregarMaisParcelamentos = useCallback(async () => {
+    const cursor = cursorParcelamentosRef.current
+    if (!cursor || carregandoMaisParcelamentosRef.current) return
+
+    const minhaSessao = sessaoAtualRef.current
+    carregandoMaisParcelamentosRef.current = true
+    setCarregandoMaisParcelamentos(true)
+    setErroParcelamentos(null)
+
+    try {
+      const pagina = await clienteAtual.get<PaginaApi<GrupoParcelamentoApi>>(
+        montarUrl('/lancamentos/parcelamentos', { cursor }),
+      )
+      if (sessaoAtualRef.current !== minhaSessao) return
+      setParcelamentos((atuais) => [...atuais, ...pagina.itens.map(paraGrupo)])
+      cursorParcelamentosRef.current = pagina.proximoCursor
+      setCursorParcelamentos(pagina.proximoCursor)
+    } catch (falha) {
+      if (sessaoAtualRef.current !== minhaSessao) return
+      setErroParcelamentos(mensagemErroApi(falha, 'Não foi possível carregar mais parcelamentos'))
+    } finally {
+      carregandoMaisParcelamentosRef.current = false
+      if (sessaoAtualRef.current === minhaSessao) setCarregandoMaisParcelamentos(false)
+    }
+  }, [clienteAtual])
 
   return (
     <LancamentosContext.Provider value={{
-      lancamentos,
       receitas,
       despesas,
-      saldoReceita,
-      saldoDespesa,
+      saldoReceita: arredondar(resumo.receitas / 100),
+      saldoDespesa: arredondar(resumo.despesas / 100),
       carregando,
       erro,
+      filtros,
+      definirFiltros,
+      temMaisReceitas: cursors.receita !== null,
+      temMaisDespesas: cursors.despesa !== null,
+      carregandoMais,
+      erroCarregarMais,
+      carregarMaisReceitas,
+      carregarMaisDespesas,
       recarregar,
       adicionarReceita,
       adicionarDespesa,
       marcarComoPaga,
+      parcelamentos,
+      carregandoParcelamentos,
+      erroParcelamentos,
+      temMaisParcelamentos: cursorParcelamentos !== null,
+      carregandoMaisParcelamentos,
+      versaoParcelamentos,
+      carregarParcelamentos,
+      carregarMaisParcelamentos,
     }}>
       {children}
     </LancamentosContext.Provider>

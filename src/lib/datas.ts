@@ -14,6 +14,24 @@ export function ehMesVigente(data: string, referencia: Date = new Date()): boole
   return ano === referencia.getFullYear() && mes === referencia.getMonth() + 1
 }
 
+/** Mês vigente no formato "AAAA-MM" usado pela API (ex: "2026-10"). */
+export function mesAtual(referencia: Date = new Date()): string {
+  return `${referencia.getFullYear()}-${pad(referencia.getMonth() + 1)}`
+}
+
+/** Desloca um mês "AAAA-MM" por `delta` meses (ex: "2026-01" com delta -1 = "2025-12"). */
+export function deslocarMes(mes: string, delta: number): string {
+  const [ano, numero] = mes.split('-').map(Number)
+  const referencia = new Date(ano, numero - 1 + delta, 1)
+  return `${referencia.getFullYear()}-${pad(referencia.getMonth() + 1)}`
+}
+
+/** Mês "AAAA-MM" por extenso, com a primeira letra maiúscula (ex: "Outubro de 2026"). */
+export function rotuloMes(mes: string): string {
+  const [ano, numero] = mes.split('-').map(Number)
+  return formatarMesAno(new Date(ano, numero - 1, 1))
+}
+
 /** Verifica se uma data "AAAA-MM-DD" já passou em relação a `referencia` (hoje, por padrão). */
 export function estaVencida(data: string, referencia: Date = new Date()): boolean {
   const [ano, mes, dia] = data.split('-').map(Number)

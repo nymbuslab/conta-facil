@@ -2,13 +2,21 @@ import { Hono } from 'hono'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { LancamentoBanco, NovoLancamentoBanco } from '@/db/schema'
+import { codificarCursor } from '@/lib/paginacao'
 
 import { criarExecutorIdempotencia, type RegistroIdempotencia, type TransacaoIdempotencia } from './idempotencia'
-import { criarRotasLancamentos, type RepositorioLancamentos } from './lancamentos'
+import {
+  colunasLancamentoListado,
+  criarRotasLancamentos,
+  paraLancamentoListado,
+  type RepositorioLancamentos,
+} from './lancamentos'
 
 function criarRepositorio(): RepositorioLancamentos {
   return {
-    listar: vi.fn().mockResolvedValue([]),
+    listar: vi.fn().mockResolvedValue({ itens: [], proximoCursor: null }),
+    resumo: vi.fn().mockResolvedValue({ receitas: 0, despesas: 0 }),
+    listarParcelamentos: vi.fn().mockResolvedValue({ itens: [], proximoCursor: null }),
     criarMuitos: vi.fn(async (dados: NovoLancamentoBanco[]): Promise<LancamentoBanco[]> =>
       dados.map((item, indice) => ({
         ...item,
@@ -59,11 +67,102 @@ describe('rotas de lancamentos', () => {
     repositorio = criarRepositorio()
   })
 
-  it('lista somente com o userId autenticado', async () => {
+  it('lista somente com o userId autenticado e a página padrão', async () => {
     const resposta = await criarApp(repositorio).request('/lancamentos')
 
     expect(resposta.status).toBe(200)
-    expect(repositorio.listar).toHaveBeenCalledWith('usuario-1')
+    expect(await resposta.json()).toEqual({ itens: [], proximoCursor: null })
+    expect(repositorio.listar).toHaveBeenCalledWith(
+      'usuario-1',
+      expect.objectContaining({ limite: 20 }),
+    )
+  })
+
+  it('repassa filtros e o cursor decodificado para o repositório', async () => {
+    const cursor = codificarCursor({
+      criadoEm: '2026-10-01T00:00:00.000Z',
+      id: '11111111-1111-1111-1111-111111111111',
+    })
+    const resposta = await criarApp(repositorio).request(
+      `/lancamentos?tipo=despesa&mes=2026-10&busca=luz&limite=50&cursor=${encodeURIComponent(cursor)}`,
+    )
+
+    expect(resposta.status).toBe(200)
+    expect(repositorio.listar).toHaveBeenCalledWith('usuario-1', {
+      limite: 50,
+      tipo: 'despesa',
+      mes: '2026-10',
+      busca: 'luz',
+      cursor: { criadoEm: '2026-10-01T00:00:00.000Z', id: '11111111-1111-1111-1111-111111111111' },
+    })
+  })
+
+  it('recusa limite fora da faixa permitida', async () => {
+    const alto = await criarApp(repositorio).request('/lancamentos?limite=1000')
+    const zero = await criarApp(repositorio).request('/lancamentos?limite=0')
+
+    expect(alto.status).toBe(400)
+    expect(zero.status).toBe(400)
+    expect(repositorio.listar).not.toHaveBeenCalled()
+  })
+
+  it('recusa mês e cursor inválidos sem consultar o repositório', async () => {
+    const mesInvalido = await criarApp(repositorio).request('/lancamentos?mes=2026-13')
+    const cursorInvalido = await criarApp(repositorio).request('/lancamentos?cursor=nao-e-base64')
+
+    expect(mesInvalido.status).toBe(400)
+    expect(cursorInvalido.status).toBe(400)
+    expect(repositorio.listar).not.toHaveBeenCalled()
+  })
+
+  it('resume receitas e despesas do usuário no mês pedido', async () => {
+    vi.mocked(repositorio.resumo).mockResolvedValue({ receitas: 500000, despesas: 120000 })
+
+    const resposta = await criarApp(repositorio).request('/lancamentos/resumo?mes=2026-10')
+
+    expect(resposta.status).toBe(200)
+    expect(await resposta.json()).toEqual({ receitas: 500000, despesas: 120000 })
+    expect(repositorio.resumo).toHaveBeenCalledWith('usuario-1', '2026-10')
+  })
+
+  it('recusa mês inválido no resumo', async () => {
+    const resposta = await criarApp(repositorio).request('/lancamentos/resumo?mes=10-2026')
+
+    expect(resposta.status).toBe(400)
+    expect(repositorio.resumo).not.toHaveBeenCalled()
+  })
+
+  it('lista os parcelamentos agrupados com cursor', async () => {
+    vi.mocked(repositorio.listarParcelamentos).mockResolvedValue({
+      itens: [{
+        parcelamentoId: '11111111-1111-1111-1111-111111111111',
+        descricao: 'Notebook',
+        totalParcelas: 3,
+        parcelasPagas: 1,
+        valorTotal: 9000,
+        valorPago: 3000,
+      }],
+      proximoCursor: 'proxima',
+    })
+
+    const resposta = await criarApp(repositorio).request('/lancamentos/parcelamentos?limite=10')
+
+    expect(resposta.status).toBe(200)
+    expect(await resposta.json()).toEqual({
+      itens: [{
+        parcelamentoId: '11111111-1111-1111-1111-111111111111',
+        descricao: 'Notebook',
+        totalParcelas: 3,
+        parcelasPagas: 1,
+        valorTotal: 9000,
+        valorPago: 3000,
+      }],
+      proximoCursor: 'proxima',
+    })
+    expect(repositorio.listarParcelamentos).toHaveBeenCalledWith(
+      'usuario-1',
+      expect.objectContaining({ limite: 10 }),
+    )
   })
 
   it('multiplica o valor da parcela em N linhas com o mesmo parcelamentoId', async () => {
@@ -160,5 +259,77 @@ describe('rotas de lancamentos', () => {
     expect((await criarApp(repositorio, 'usuario-2', executar).request('/lancamentos', init)).status).toBe(201)
     expect((await criarApp(repositorio).request('/lancamentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: corpo })).status).toBe(201)
     expect(repositorio.criarMuitos).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('projeção da listagem de lancamentos', () => {
+  it('seleciona só as colunas da tela mais criadoEm para o cursor', () => {
+    expect(Object.keys(colunasLancamentoListado).sort()).toEqual([
+      'criadoEm',
+      'dataEmissao',
+      'descricao',
+      'id',
+      'paga',
+      'parcelaAtual',
+      'parcelamentoId',
+      'tipo',
+      'totalParcelas',
+      'valor',
+      'vencimento',
+    ])
+  })
+
+  it('nunca expõe userId nem os timestamps internos no item da listagem', () => {
+    const item = paraLancamentoListado({
+      id: '11111111-1111-1111-1111-111111111111',
+      tipo: 'despesa',
+      descricao: 'Luz',
+      valor: 4200,
+      dataEmissao: null,
+      vencimento: '2026-10-10',
+      paga: false,
+      parcelamentoId: null,
+      parcelaAtual: null,
+      totalParcelas: null,
+      criadoEm: new Date('2026-10-10T00:00:00.000Z'),
+    })
+
+    expect(item).not.toHaveProperty('userId')
+    expect(item).not.toHaveProperty('criadoEm')
+    expect(item).not.toHaveProperty('atualizadoEm')
+    expect(Object.keys(item).sort()).toEqual([
+      'dataEmissao',
+      'descricao',
+      'id',
+      'paga',
+      'parcelaAtual',
+      'parcelamentoId',
+      'tipo',
+      'totalParcelas',
+      'valor',
+      'vencimento',
+    ])
+  })
+
+  it('devolve a página inteira em uma única consulta, independente do volume', async () => {
+    const repositorio = criarRepositorio()
+    const itens = Array.from({ length: 15 }, (_, indice) => ({
+      id: `id-${indice}`,
+      tipo: 'receita' as const,
+      descricao: `Receita ${indice}`,
+      valor: 100,
+      dataEmissao: '2026-10-01',
+      vencimento: null,
+      paga: false,
+      parcelamentoId: null,
+      parcelaAtual: null,
+      totalParcelas: null,
+    }))
+    vi.mocked(repositorio.listar).mockResolvedValue({ itens, proximoCursor: 'proximo' })
+
+    const resposta = await criarApp(repositorio).request('/lancamentos')
+
+    expect(await resposta.json()).toEqual({ itens, proximoCursor: 'proximo' })
+    expect(repositorio.listar).toHaveBeenCalledTimes(1)
   })
 })

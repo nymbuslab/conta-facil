@@ -1,4 +1,4 @@
-import { and, eq, gte, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -7,6 +7,14 @@ import {
   type CaixinhaBanco,
   type NovaCaixinhaBanco,
 } from '../../db/schema.ts'
+import {
+  decodificarCursor,
+  LIMITE_MAXIMO,
+  montarPagina,
+  normalizarLimite,
+  type Cursor,
+  type Pagina,
+} from '../../lib/paginacao.ts'
 import type { VariaveisAuth } from './auth-middleware.ts'
 import { obterBanco } from './db.ts'
 import { executarComIdempotencia } from './idempotencia.ts'
@@ -16,14 +24,51 @@ const criarCaixinhaSchema = z.object({
   meta: z.number().int().positive(),
 })
 const movimentarSchema = z.object({ valor: z.number().int().positive() })
+const filtrosPaginaSchema = z.object({
+  limite: z.coerce.number().int().min(1).max(LIMITE_MAXIMO).optional(),
+  cursor: z.string().min(1).optional(),
+})
+
+export interface FiltrosPagina {
+  limite: number
+  cursor?: Cursor
+}
 
 export type ResultadoResgate =
   | { tipo: 'ok'; caixinha: CaixinhaBanco }
   | { tipo: 'nao_encontrada' }
   | { tipo: 'saldo_insuficiente' }
 
+/** Campos que a listagem de caixinhas expõe. Sem `userId` nem timestamps internos. */
+export interface CaixinhaListada {
+  id: string
+  nome: string
+  valorGuardado: number
+  meta: number
+}
+
+/** Projeção explícita da listagem; `criadoEm` fica só para o cursor keyset. */
+export const colunasCaixinhaListada = {
+  id: caixinhas.id,
+  nome: caixinhas.nome,
+  valorGuardado: caixinhas.valorGuardado,
+  meta: caixinhas.meta,
+  criadoEm: caixinhas.criadoEm,
+} as const
+
+/** Descarta `criadoEm` e devolve só o shape público da listagem. */
+export function paraCaixinhaListada(item: CaixinhaListada & { criadoEm: Date }): CaixinhaListada {
+  return {
+    id: item.id,
+    nome: item.nome,
+    valorGuardado: item.valorGuardado,
+    meta: item.meta,
+  }
+}
+
 export type RepositorioCaixinhas = {
-  listar: (userId: string) => Promise<CaixinhaBanco[]>
+  listar: (userId: string, filtros: FiltrosPagina) => Promise<Pagina<CaixinhaListada>>
+  totalGuardado: (userId: string) => Promise<number>
   criar: (dados: NovaCaixinhaBanco) => Promise<CaixinhaBanco>
   depositar: (userId: string, id: string, valor: number, banco?: unknown) => Promise<CaixinhaBanco | null>
   resgatar: (userId: string, id: string, valor: number, banco?: unknown) => Promise<ResultadoResgate>
@@ -31,12 +76,35 @@ export type RepositorioCaixinhas = {
 }
 
 const repositorioPadrao: RepositorioCaixinhas = {
-  listar(userId) {
-    return obterBanco()
-      .select()
+  async listar(userId, filtros) {
+    const linhas = await obterBanco()
+      .select(colunasCaixinhaListada)
+      .from(caixinhas)
+      .where(
+        and(
+          eq(caixinhas.userId, userId),
+          filtros.cursor
+            ? sql`(${caixinhas.criadoEm}, ${caixinhas.id}) > (${filtros.cursor.criadoEm}::timestamptz, ${filtros.cursor.id}::uuid)`
+            : undefined,
+        ),
+      )
+      .orderBy(asc(caixinhas.criadoEm), asc(caixinhas.id))
+      .limit(filtros.limite + 1)
+    const pagina = montarPagina(linhas, filtros.limite, (item) => ({
+      criadoEm: item.criadoEm.toISOString(),
+      id: item.id,
+    }))
+    return {
+      itens: pagina.itens.map(paraCaixinhaListada),
+      proximoCursor: pagina.proximoCursor,
+    }
+  },
+  async totalGuardado(userId) {
+    const [linha] = await obterBanco()
+      .select({ total: sql<number>`coalesce(sum(${caixinhas.valorGuardado}), 0)::int` })
       .from(caixinhas)
       .where(eq(caixinhas.userId, userId))
-      .orderBy(caixinhas.criadoEm)
+    return linha?.total ?? 0
   },
   async criar(dados) {
     const [criada] = await obterBanco().insert(caixinhas).values(dados).returning()
@@ -114,7 +182,27 @@ export function criarRotasCaixinhas(
 ) {
   const app = new Hono<{ Variables: VariaveisAuth }>()
 
-  app.get('/', async (contexto) => contexto.json(await repositorio.listar(contexto.get('userId'))))
+  app.get('/', async (contexto) => {
+    const resultado = filtrosPaginaSchema.safeParse(contexto.req.query())
+    if (!resultado.success) return contexto.json({ erro: 'Parâmetros inválidos' }, 400)
+
+    const cursor = resultado.data.cursor ? decodificarCursor(resultado.data.cursor) : undefined
+    if (resultado.data.cursor && !cursor) return contexto.json({ erro: 'Parâmetros inválidos' }, 400)
+
+    const userId = contexto.get('userId')
+    const [pagina, totalGuardado] = await Promise.all([
+      repositorio.listar(userId, {
+        limite: normalizarLimite(resultado.data.limite),
+        cursor: cursor ?? undefined,
+      }),
+      repositorio.totalGuardado(userId),
+    ])
+    return contexto.json({
+      itens: pagina.itens,
+      proximoCursor: pagina.proximoCursor,
+      totalGuardado,
+    })
+  })
 
   app.post('/', async (contexto) => {
     const corpo = await lerCorpoJson(contexto)

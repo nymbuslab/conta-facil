@@ -1,8 +1,9 @@
+import { useEffect } from 'react'
 import { createRoute } from '@tanstack/react-router'
 
+import { BotaoCarregarMais } from '@/components/botao-carregar-mais'
 import { ParcelaCard } from '@/components/parcela-card'
-import { EstadoCarregando, EstadoErro } from '@/components/estado-dados'
-import { agruparParcelamentos } from '@/lib/parcelamento'
+import { EstadoCarregandoParcelas, EstadoErro } from '@/components/estado-dados'
 import { useLancamentos } from '@/state/lancamentos-context'
 import { Route as rootRoute } from '@/routes/__root'
 
@@ -13,8 +14,21 @@ export const Route = createRoute({
 })
 
 export function TelaParcelas() {
-  const { despesas, carregando, erro, recarregar } = useLancamentos()
-  const grupos = agruparParcelamentos(despesas)
+  const {
+    parcelamentos,
+    carregandoParcelamentos,
+    erroParcelamentos,
+    temMaisParcelamentos,
+    carregandoMaisParcelamentos,
+    carregarParcelamentos,
+    carregarMaisParcelamentos,
+    versaoParcelamentos,
+  } = useLancamentos()
+
+  // Carrega ao entrar e recarrega quando um parcelamento e criado ou pago em outra tela.
+  useEffect(() => {
+    void carregarParcelamentos()
+  }, [carregarParcelamentos, versaoParcelamentos])
 
   return (
     <div className="mx-auto min-h-svh max-w-xl px-4 pb-36">
@@ -24,17 +38,17 @@ export function TelaParcelas() {
         </h1>
       </header>
 
-      {carregando ? (
-        <EstadoCarregando />
-      ) : erro ? (
-        <EstadoErro tentarNovamente={recarregar} />
-      ) : grupos.length === 0 ? (
+      {carregandoParcelamentos && parcelamentos.length === 0 ? (
+        <EstadoCarregandoParcelas />
+      ) : erroParcelamentos && parcelamentos.length === 0 ? (
+        <EstadoErro tentarNovamente={carregarParcelamentos} />
+      ) : parcelamentos.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
           Nenhuma compra parcelada ainda.
         </p>
       ) : (
         <div className="flex flex-col gap-4">
-          {grupos.map((grupo) => (
+          {parcelamentos.map((grupo) => (
             <ParcelaCard
               key={grupo.parcelamentoId}
               descricao={grupo.descricao}
@@ -45,6 +59,19 @@ export function TelaParcelas() {
               valorFalta={grupo.valorFalta}
             />
           ))}
+
+          {temMaisParcelamentos && (
+            <BotaoCarregarMais
+              carregando={carregandoMaisParcelamentos}
+              onClick={() => void carregarMaisParcelamentos()}
+            />
+          )}
+
+          {erroParcelamentos && (
+            <p role="alert" className="text-center text-sm text-destructive">
+              {erroParcelamentos}
+            </p>
+          )}
         </div>
       )}
     </div>

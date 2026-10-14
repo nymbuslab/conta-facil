@@ -7,9 +7,13 @@ import { criarClienteAuthTeste } from '@/test/test-utils'
 import { AuthProvider } from './auth-context'
 import { CaixinhasProvider, useCaixinhas } from './caixinhas-context'
 
-function criarCliente(overrides: Partial<ApiClient> = {}) {
+function envelope(itens: unknown[] = [], totalGuardado = 0) {
+  return { itens, proximoCursor: null, totalGuardado }
+}
+
+function criarCliente(overrides: Record<string, unknown> = {}) {
   return {
-    get: vi.fn().mockResolvedValue([]),
+    get: vi.fn().mockResolvedValue(envelope()),
     post: vi.fn(),
     postIdempotente: vi.fn(),
     patch: vi.fn(),
@@ -31,9 +35,9 @@ function montar(cliente: ApiClient) {
 describe('CaixinhasProvider', () => {
   it('carrega caixinhas da Function e converte centavos para reais', async () => {
     const cliente = criarCliente({
-      get: vi.fn().mockResolvedValue([
+      get: vi.fn().mockResolvedValue(envelope([
         { id: 'caixinha-1', nome: 'Viagem', valorGuardado: 240000, meta: 600000 },
-      ]),
+      ], 240000)),
     })
 
     const { result } = montar(cliente)
@@ -60,14 +64,16 @@ describe('CaixinhasProvider', () => {
     expect(post).toHaveBeenCalledWith('/caixinhas', { nome: 'Viagem', meta: 600000 })
     expect(postIdempotente).toHaveBeenCalledWith('/caixinhas/caixinha-1/depositar', { valor: 240000 })
     expect(result.current.caixinhas[0].valorGuardado).toBe(2400)
+    // O total guardado acompanha o deposito sem precisar recarregar a pagina inteira.
+    expect(result.current.totalGuardado).toBe(2400)
   })
 
   it('saldo insuficiente devolve sucesso false sem alterar as caixinhas', async () => {
     const postIdempotente = vi.fn().mockRejectedValue(new ApiError(400, 'Saldo insuficiente'))
     const cliente = criarCliente({
-      get: vi.fn().mockResolvedValue([
+      get: vi.fn().mockResolvedValue(envelope([
         { id: 'reserva-1', nome: 'Reserva', valorGuardado: 10000, meta: 100000 },
-      ]),
+      ], 10000)),
       postIdempotente,
     })
     const { result } = montar(cliente)
@@ -81,12 +87,13 @@ describe('CaixinhasProvider', () => {
     expect(resposta).toEqual({ sucesso: false, erro: 'Saldo insuficiente' })
     expect(postIdempotente).toHaveBeenCalledWith('/caixinhas/reserva-1/resgatar', { valor: 20000 })
     expect(result.current.caixinhas[0].valorGuardado).toBe(100)
+    expect(result.current.totalGuardado).toBe(100)
   })
 
-  it('expoe erro de rede e recarrega sem manter dados antigos', async () => {
+  it('expoe erro de rede e recarrega ate o estado vazio', async () => {
     const get = vi.fn()
       .mockRejectedValueOnce(new Error('Function indisponivel'))
-      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(envelope())
     const { result } = montar(criarCliente({ get }))
 
     await waitFor(() => expect(result.current.erro).toBe('Function indisponivel'))

@@ -20,6 +20,20 @@ export class ApiError extends Error {
   }
 }
 
+const MENSAGEM_SESSAO = 'Sua sessão expirou. Entre novamente.'
+
+/** Traduz a falha tecnica para uma mensagem exibivel: distingue sessao expirada
+ * (401/403, precisa reautenticar) de queda de conexao (fetch TypeError) das demais. */
+export function mensagemErroApi(falha: unknown, fallback: string): string {
+  if (falha instanceof ApiError) {
+    if (falha.status === 401 || falha.status === 403) return MENSAGEM_SESSAO
+    return falha.message || fallback
+  }
+  if (falha instanceof TypeError) return 'Não foi possível conectar. Confira sua conexão.'
+  if (falha instanceof Error && falha.message) return falha.message
+  return fallback
+}
+
 export function criarApiClient({
   baseUrl,
   obterToken,

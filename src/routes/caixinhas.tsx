@@ -3,11 +3,12 @@ import { createRoute } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 
 import { CaixinhaCard } from '@/components/caixinha-card'
-import { EstadoCarregando, EstadoErro } from '@/components/estado-dados'
+import { EstadoCarregandoCaixinhas, EstadoErro } from '@/components/estado-dados'
 import { ExcluirCaixinhaDialog } from '@/components/excluir-caixinha-dialog'
 import { MovimentarCaixinhaModal } from '@/components/movimentar-caixinha-modal'
 import { NovaCaixinhaModal } from '@/components/nova-caixinha-modal'
 import { Button } from '@/components/ui/button'
+import { mensagemErroApi } from '@/lib/api-client'
 import { useCaixinhas } from '@/state/caixinhas-context'
 import { Route as rootRoute } from '@/routes/__root'
 import type { Caixinha } from '@/types/caixinha'
@@ -29,12 +30,14 @@ export function TelaCaixinhas() {
   const [erroExclusao, setErroExclusao] = useState<string | null>(null)
 
   async function confirmarExclusao(id: string) {
+    // Optimistic: fecha o dialogo e remove o card na hora; se a Function falhar, o
+    // contexto devolve a caixinha e o aviso abaixo explica o que aconteceu.
     setErroExclusao(null)
+    setExcluindo(null)
     try {
       await excluirCaixinha(id)
-      setExcluindo(null)
     } catch (falha) {
-      setErroExclusao(falha instanceof Error ? falha.message : 'Não foi possível excluir a caixinha')
+      setErroExclusao(mensagemErroApi(falha, 'Não foi possível excluir a caixinha'))
     }
   }
 
@@ -50,9 +53,26 @@ export function TelaCaixinhas() {
         </Button>
       </header>
 
-      {carregando ? (
-        <EstadoCarregando />
-      ) : erro ? (
+      {erroExclusao && (
+        <div
+          role="alert"
+          className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-card px-4 py-3 text-sm text-destructive"
+        >
+          <span>{erroExclusao}</span>
+          <button
+            type="button"
+            onClick={() => setErroExclusao(null)}
+            aria-label="Fechar aviso"
+            className="rounded-sm font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {carregando && caixinhas.length === 0 ? (
+        <EstadoCarregandoCaixinhas />
+      ) : erro && caixinhas.length === 0 ? (
         <EstadoErro tentarNovamente={recarregar} />
       ) : caixinhas.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
@@ -80,7 +100,6 @@ export function TelaCaixinhas() {
       />
       <ExcluirCaixinhaDialog
         caixinha={excluindo}
-        erro={erroExclusao}
         onCancelar={() => {
           setExcluindo(null)
           setErroExclusao(null)

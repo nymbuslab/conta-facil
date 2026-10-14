@@ -84,22 +84,25 @@ try {
     throw new Error('A mesma chave nao ficou isolada por usuario')
   }
 
-  const [listaA, listaB] = await Promise.all([
-    app.request('/lancamentos', {
-      headers: { Authorization: `Bearer ${usuarioA.token}` },
-    }),
-    app.request('/lancamentos', {
-      headers: { Authorization: `Bearer ${usuarioB.token}` },
-    }),
-  ])
-  const dadosA = (await listaA.json()) as Array<{ userId?: string }>
-  const dadosB = (await listaB.json()) as Array<{ userId?: string }>
+  const listaA = await app.request('/lancamentos', {
+    headers: { Authorization: `Bearer ${usuarioA.token}` },
+  })
+  const listaB = await app.request('/lancamentos', {
+    headers: { Authorization: `Bearer ${usuarioB.token}` },
+  })
+  const dadosA = (await listaA.json()) as { itens: Array<Record<string, unknown>> }
+  const dadosB = (await listaB.json()) as { itens: Array<Record<string, unknown>> }
 
-  if (!dadosA.some((item) => item.userId === usuarioA.id)) {
-    throw new Error('Usuario criador nao recebeu o proprio lancamento')
+  // A listagem nunca deve expor colunas internas da tabela (a tela nao usa nenhuma delas).
+  for (const [rotulo, dados] of [['A', dadosA], ['B', dadosB]] as const) {
+    for (const campo of ['userId', 'criadoEm', 'atualizadoEm']) {
+      if (dados.itens.some((item) => campo in item)) {
+        throw new Error(`Lista do usuario ${rotulo} expos o campo interno ${campo}`)
+      }
+    }
   }
-  if (dadosB.some((item) => item.userId === usuarioA.id)) {
-    throw new Error('Lancamento vazou para outro usuario')
+  if (!dadosA.itens.some((item) => item.descricao === 'Despesa idempotente de integração')) {
+    throw new Error('Usuario criador nao recebeu o proprio lancamento')
   }
 
   const contagens = await pool.query<{ user_id: string; total: string }>(

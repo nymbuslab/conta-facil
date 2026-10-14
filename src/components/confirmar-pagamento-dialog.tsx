@@ -12,6 +12,7 @@ import type { Despesa } from '@/types/lancamento'
 interface ConfirmarPagamentoDialogProps {
   despesa: Despesa | null
   erro?: string | null
+  processando?: boolean
   onCancelar: () => void
   onConfirmar: (id: string) => void
 }
@@ -19,11 +20,17 @@ interface ConfirmarPagamentoDialogProps {
 export function ConfirmarPagamentoDialog({
   despesa,
   erro,
+  processando = false,
   onCancelar,
   onConfirmar,
 }: ConfirmarPagamentoDialogProps) {
   return (
-    <Dialog open={despesa !== null} onOpenChange={(open) => !open && onCancelar()}>
+    <Dialog
+      open={despesa !== null}
+      onOpenChange={(open) => {
+        if (!open && !processando) onCancelar()
+      }}
+    >
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Deseja marcar como paga?</DialogTitle>
@@ -38,14 +45,15 @@ export function ConfirmarPagamentoDialog({
         )}
         {erro && <p className="text-sm text-destructive">{erro}</p>}
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={onCancelar} className="flex-1">
+          <Button variant="outline" onClick={onCancelar} className="flex-1" disabled={processando}>
             Cancelar
           </Button>
           <Button
             onClick={() => despesa && onConfirmar(despesa.id)}
             className="flex-1"
+            disabled={processando}
           >
-            Marcar como paga
+            {processando ? 'Marcando...' : 'Marcar como paga'}
           </Button>
         </DialogFooter>
       </DialogContent>

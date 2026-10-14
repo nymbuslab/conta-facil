@@ -9,8 +9,9 @@ import {
   type ReactNode,
 } from 'react'
 
-import { criarApiClient, type ApiClient } from '@/lib/api-client'
+import { criarApiClient, mensagemErroApi, type ApiClient } from '@/lib/api-client'
 import { parseValorMonetario } from '@/lib/formatters'
+import { montarUrl } from '@/lib/paginacao'
 import type { Caixinha, CriarCaixinhaFormValues, MovimentarCaixinhaFormValues } from '@/types/caixinha'
 
 import { useAuth } from './auth-context'
@@ -25,6 +26,10 @@ interface CaixinhasContextValue {
   totalGuardado: number
   carregando: boolean
   erro: string | null
+  temMais: boolean
+  carregandoMais: boolean
+  erroCarregarMais: string | null
+  carregarMais: () => Promise<void>
   recarregar: () => Promise<void>
   criarCaixinha: (dados: CriarCaixinhaFormValues) => Promise<void>
   depositar: (id: string, dados: MovimentarCaixinhaFormValues) => Promise<ResultadoMovimentacao>
@@ -37,6 +42,12 @@ type CaixinhaApi = {
   nome: string
   valorGuardado: number
   meta: number
+}
+
+interface PaginaCaixinhasApi {
+  itens: CaixinhaApi[]
+  proximoCursor: string | null
+  totalGuardado: number
 }
 
 const CaixinhasContext = createContext<CaixinhasContextValue | null>(null)
@@ -52,10 +63,6 @@ function paraCaixinha(item: CaixinhaApi): Caixinha {
     valorGuardado: item.valorGuardado / 100,
     meta: item.meta / 100,
   }
-}
-
-function mensagemErro(falha: unknown) {
-  return falha instanceof Error ? falha.message : 'Nao foi possivel carregar as caixinhas'
 }
 
 export function CaixinhasProvider({
@@ -74,27 +81,64 @@ export function CaixinhasProvider({
     [cliente, obterToken],
   )
   const [caixinhas, setCaixinhas] = useState<Caixinha[]>([])
+  const [totalGuardado, setTotalGuardado] = useState(0)
+  const [cursor, setCursor] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
+  const [carregandoMais, setCarregandoMais] = useState(false)
+  const [erroCarregarMais, setErroCarregarMais] = useState<string | null>(null)
 
   /** Descarta respostas de uma sessao/usuario que ja nao e o atual: ver mesma nota em
    * lancamentos-context.tsx. */
   const geracaoAtualRef = useRef(0)
+  const cursorRef = useRef<string | null>(null)
+  const carregandoMaisRef = useRef(false)
 
-  const recarregar = useCallback(async () => {
+  const carregarPrimeiraPagina = useCallback(async () => {
     const minhaGeracao = ++geracaoAtualRef.current
     setCarregando(true)
     setErro(null)
-    setCaixinhas([])
+    setErroCarregarMais(null)
     try {
-      const dados = await clienteAtual.get<CaixinhaApi[]>('/caixinhas')
+      const pagina = await clienteAtual.get<PaginaCaixinhasApi>('/caixinhas')
       if (geracaoAtualRef.current !== minhaGeracao) return
-      setCaixinhas(dados.map(paraCaixinha))
+      setCaixinhas(pagina.itens.map(paraCaixinha))
+      setTotalGuardado(arredondar(pagina.totalGuardado / 100))
+      cursorRef.current = pagina.proximoCursor
+      setCursor(pagina.proximoCursor)
     } catch (falha) {
       if (geracaoAtualRef.current !== minhaGeracao) return
-      setErro(mensagemErro(falha))
+      setErro(mensagemErroApi(falha, 'Nao foi possivel carregar as caixinhas'))
     } finally {
       if (geracaoAtualRef.current === minhaGeracao) setCarregando(false)
+    }
+  }, [clienteAtual])
+
+  const recarregar = carregarPrimeiraPagina
+
+  const carregarMais = useCallback(async () => {
+    const cursorAtual = cursorRef.current
+    if (!cursorAtual || carregandoMaisRef.current) return
+
+    const minhaGeracao = geracaoAtualRef.current
+    carregandoMaisRef.current = true
+    setCarregandoMais(true)
+    setErroCarregarMais(null)
+    try {
+      const pagina = await clienteAtual.get<PaginaCaixinhasApi>(
+        montarUrl('/caixinhas', { cursor: cursorAtual }),
+      )
+      if (geracaoAtualRef.current !== minhaGeracao) return
+      setCaixinhas((atuais) => [...atuais, ...pagina.itens.map(paraCaixinha)])
+      setTotalGuardado(arredondar(pagina.totalGuardado / 100))
+      cursorRef.current = pagina.proximoCursor
+      setCursor(pagina.proximoCursor)
+    } catch (falha) {
+      if (geracaoAtualRef.current !== minhaGeracao) return
+      setErroCarregarMais(mensagemErroApi(falha, 'Não foi possível carregar mais'))
+    } finally {
+      carregandoMaisRef.current = false
+      if (geracaoAtualRef.current === minhaGeracao) setCarregandoMais(false)
     }
   }, [clienteAtual])
 
@@ -102,17 +146,21 @@ export function CaixinhasProvider({
     if (status !== 'autenticado') {
       geracaoAtualRef.current += 1
       setCaixinhas([])
+      setTotalGuardado(0)
+      cursorRef.current = null
+      setCursor(null)
       setErro(null)
+      setErroCarregarMais(null)
       setCarregando(status === 'carregando')
       return
     }
-    void recarregar()
-  }, [recarregar, status, usuario?.id])
+    void carregarPrimeiraPagina()
+  }, [carregarPrimeiraPagina, status, usuario?.id])
 
-  const totalGuardado = useMemo(
-    () => arredondar(caixinhas.reduce((soma, item) => soma + item.valorGuardado, 0)),
-    [caixinhas],
-  )
+  function ajustarTotal(delta: number) {
+    if (delta === 0) return
+    setTotalGuardado((atual) => arredondar(atual + delta))
+  }
 
   async function criarCaixinha(dados: CriarCaixinhaFormValues) {
     const meta = parseValorMonetario(dados.meta)
@@ -121,6 +169,7 @@ export function CaixinhasProvider({
       nome: dados.nome,
       meta: Math.round(meta * 100),
     })
+    // Caixinha nova entra com valorGuardado zero: o total guardado nao muda.
     setCaixinhas((atuais) => [...atuais, paraCaixinha(criada)])
   }
 
@@ -136,13 +185,15 @@ export function CaixinhasProvider({
         valor: Math.round(valor * 100),
       })
       const caixinha = paraCaixinha(atualizada)
-      setCaixinhas((atuais) => atuais.map((item) => item.id === id ? caixinha : item))
+      const anterior = caixinhas.find((item) => item.id === id)
+      setCaixinhas((atuais) => atuais.map((item) => (item.id === id ? caixinha : item)))
+      if (anterior) ajustarTotal(caixinha.valorGuardado - anterior.valorGuardado)
       return { sucesso: true }
     } catch (falha) {
       // Erro de mutacao fica so no resultado devolvido ao modal: setErro aqui tomaria o
       // mesmo estado da falha de CARREGAMENTO da pagina e trocaria a lista inteira por
       // EstadoErro mesmo num caso esperado como saldo insuficiente.
-      return { sucesso: false, erro: mensagemErro(falha) }
+      return { sucesso: false, erro: mensagemErroApi(falha, 'Não foi possível concluir a operação') }
     }
   }
 
@@ -155,8 +206,26 @@ export function CaixinhasProvider({
   }
 
   async function excluirCaixinha(id: string) {
-    await clienteAtual.delete(`/caixinhas/${id}`)
+    // Optimistic: o card some na hora. Em falha, volta na posicao original para a lista
+    // nao ficar sem a caixinha que continua existindo no servidor.
+    const indice = caixinhas.findIndex((item) => item.id === id)
+    const anterior = indice >= 0 ? caixinhas[indice] : undefined
     setCaixinhas((atuais) => atuais.filter((item) => item.id !== id))
+    ajustarTotal(-(anterior?.valorGuardado ?? 0))
+    try {
+      await clienteAtual.delete(`/caixinhas/${id}`)
+    } catch (falha) {
+      if (anterior) {
+        setCaixinhas((atuais) => {
+          if (atuais.some((item) => item.id === id)) return atuais
+          const copia = [...atuais]
+          copia.splice(indice, 0, anterior)
+          return copia
+        })
+        ajustarTotal(anterior.valorGuardado)
+      }
+      throw falha
+    }
   }
 
   return (
@@ -165,6 +234,10 @@ export function CaixinhasProvider({
       totalGuardado,
       carregando,
       erro,
+      temMais: cursor !== null,
+      carregandoMais,
+      erroCarregarMais,
+      carregarMais,
       recarregar,
       criarCaixinha,
       depositar,

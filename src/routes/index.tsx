@@ -1,14 +1,13 @@
-import { useMemo } from 'react'
 import { createRoute } from '@tanstack/react-router'
 
 import { Header } from '@/components/header'
-import { EstadoCarregando, EstadoErro } from '@/components/estado-dados'
+import { EstadoCarregandoInicio, EstadoErro } from '@/components/estado-dados'
+import { FiltrosLancamentos } from '@/components/filtros-lancamentos'
 import { ListaLancamentos } from '@/components/lista-lancamentos'
 import { RegistrarFab } from '@/components/registrar-fab'
 import { SaldoAcumuladoBar } from '@/components/saldo-acumulado-bar'
 import { SaldoCard } from '@/components/saldo-card'
 import { useSaldoAcumulado } from '@/hooks/use-saldo-acumulado'
-import { ehMesVigente } from '@/lib/datas'
 import { useCaixinhas } from '@/state/caixinhas-context'
 import { useLancamentos } from '@/state/lancamentos-context'
 import { Route as rootRoute } from '@/routes/__root'
@@ -23,23 +22,34 @@ export function TelaPrincipal() {
   const {
     receitas,
     despesas,
+    saldoReceita,
+    saldoDespesa,
     carregando: carregandoLancamentos,
     erro: erroLancamentos,
     recarregar: recarregarLancamentos,
+    filtros,
+    definirFiltros,
+    temMaisReceitas,
+    temMaisDespesas,
+    carregandoMais,
+    erroCarregarMais,
+    carregarMaisReceitas,
+    carregarMaisDespesas,
   } = useLancamentos()
   const {
+    caixinhas,
     totalGuardado,
     carregando: carregandoCaixinhas,
     erro: erroCaixinhas,
     recarregar: recarregarCaixinhas,
   } = useCaixinhas()
 
-  const receitasDoMes = useMemo(() => receitas.filter((r) => ehMesVigente(r.dataEmissao)), [receitas])
-  const despesasDoMes = useMemo(() => despesas.filter((d) => ehMesVigente(d.vencimento)), [despesas])
-
-  const { saldoReceita, saldoDespesa, saldoAcumulado } = useSaldoAcumulado(receitasDoMes, despesasDoMes)
+  const { saldoAcumulado } = useSaldoAcumulado(saldoReceita, saldoDespesa)
   const carregando = carregandoLancamentos || carregandoCaixinhas
   const erro = erroLancamentos ?? erroCaixinhas
+  // Skeleton so na primeira carga (sem nenhum dado ainda). Numa recarga com dados na tela,
+  // mantem o conteudo visivel em vez de trocar tudo por blocos pulsantes.
+  const semDados = receitas.length === 0 && despesas.length === 0 && caixinhas.length === 0
 
   async function tentarNovamente() {
     await Promise.all([recarregarLancamentos(), recarregarCaixinhas()])
@@ -48,9 +58,9 @@ export function TelaPrincipal() {
   return (
     <div className="mx-auto min-h-svh max-w-xl px-4 pb-36">
       <Header />
-      {carregando ? (
-        <EstadoCarregando />
-      ) : erro ? (
+      {carregando && semDados ? (
+        <EstadoCarregandoInicio />
+      ) : erro && semDados ? (
         <EstadoErro tentarNovamente={tentarNovamente} />
       ) : (
         <>
@@ -62,8 +72,22 @@ export function TelaPrincipal() {
             <SaldoCard titulo="Guardado" valor={totalGuardado} />
           </div>
 
-          <div className="mt-6">
-            <ListaLancamentos receitas={receitasDoMes} despesas={despesasDoMes} />
+          <div className="mt-6 flex flex-col gap-4">
+            <FiltrosLancamentos
+              mes={filtros.mes}
+              busca={filtros.busca}
+              onChange={definirFiltros}
+            />
+            <ListaLancamentos
+              receitas={receitas}
+              despesas={despesas}
+              temMaisReceitas={temMaisReceitas}
+              temMaisDespesas={temMaisDespesas}
+              carregandoMais={carregandoMais}
+              erroCarregarMais={erroCarregarMais}
+              onCarregarMaisReceitas={() => void carregarMaisReceitas()}
+              onCarregarMaisDespesas={() => void carregarMaisDespesas()}
+            />
           </div>
 
           <RegistrarFab />

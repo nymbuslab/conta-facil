@@ -90,8 +90,8 @@ export function NovaCaixinhaModal({ open, onOpenChange }: NovaCaixinhaModalProps
               )}
             />
             <DialogFooter>
-              <Button type="submit" className="w-full">
-                Criar caixinha
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Criando...' : 'Criar caixinha'}
               </Button>
             </DialogFooter>
           </form>

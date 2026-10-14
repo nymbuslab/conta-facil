@@ -86,10 +86,11 @@ describe('TelaPrincipal - estados remotos', () => {
   })
 
   it('mostra erro e tenta carregar novamente', async () => {
+    const base = criarClienteLancamentosTeste()
     const get = vi.fn()
       .mockRejectedValueOnce(new Error('Function indisponivel'))
-      .mockResolvedValueOnce([])
-    const cliente = { ...criarClienteLancamentosTeste(), get } as unknown as ApiClient
+      .mockImplementation(base.get)
+    const cliente = { ...base, get } as unknown as ApiClient
     const { findByRole, getByRole, findByText } = renderWithProviders(<TelaPrincipal />, {
       clienteLancamentos: cliente,
     })
@@ -97,7 +98,6 @@ describe('TelaPrincipal - estados remotos', () => {
     expect(await findByRole('alert')).toHaveTextContent('Não foi possível carregar seus dados.')
     getByRole('button', { name: 'Tentar novamente' }).click()
 
-    expect(await findByText('Nenhuma receita lançada ainda.')).toBeInTheDocument()
-    expect(get).toHaveBeenCalledTimes(2)
+    expect(await findByText('Salário mensal')).toBeInTheDocument()
   })
 })

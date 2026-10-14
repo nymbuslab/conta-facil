@@ -5,27 +5,8 @@ import { CaixinhasProvider, useCaixinhas } from '@/state/caixinhas-context'
 import { AuthProvider } from '@/state/auth-context'
 import { criarClienteCaixinhasTeste } from '@/test/api-client-mocks'
 import { criarClienteAuthTeste } from '@/test/test-utils'
-import type { Despesa, Receita } from '@/types/lancamento'
 
 import { useSaldoAcumulado } from './use-saldo-acumulado'
-
-const receitas: Receita[] = [
-  { id: 'r1', tipo: 'receita', dataEmissao: '2026-10-05', descricao: 'Salário', valor: 6450 },
-]
-
-const despesas: Despesa[] = [
-  {
-    id: 'd1',
-    tipo: 'despesa',
-    descricao: 'Aluguel',
-    valor: 3119.5,
-    vencimento: '2026-10-10',
-    paga: false,
-    parcelamentoId: null,
-    parcelaAtual: null,
-    totalParcelas: null,
-  },
-]
 
 function Wrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -36,9 +17,9 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe('useSaldoAcumulado', () => {
-  it('combina Receita, Despesa e totalGuardado das Caixinhas', async () => {
+  it('combina os totais de Receita e Despesa com o totalGuardado das Caixinhas', async () => {
     const { result } = renderHook(
-      () => ({ saldo: useSaldoAcumulado(receitas, despesas), caixinhas: useCaixinhas() }),
+      () => ({ saldo: useSaldoAcumulado(6450, 3119.5), caixinhas: useCaixinhas() }),
       { wrapper: Wrapper },
     )
 
