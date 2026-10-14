@@ -2,6 +2,16 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-14 — Reforço de segurança e rotina de verificação automática
+
+- O app passa a rodar uma checagem de segurança própria toda semana, sem precisar de ninguém
+  pedir: ela testa autenticação, acesso entre contas diferentes e tentativas de invasão comuns.
+- Corrigido um caso em que um token de sessão malformado respondia como se o sistema estivesse
+  fora do ar, quando na verdade era um erro de autenticação simples.
+- A validação de sessão ficou mais estrita, rejeitando tokens emitidos para outro fim.
+- O site e a API passam a enviar cabeçalhos de segurança do navegador (bloqueio de clickjacking,
+  política de conteúdo restritiva e conexão sempre criptografada).
+
 ## 2026-10-13 — Listas com 5 itens por vez
 
 - As listas de receitas, despesas e caixinhas passam a mostrar 5 itens por vez, com o botão
