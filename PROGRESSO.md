@@ -8,14 +8,6 @@ Nenhum item em andamento.
 
 ## 📋 Próximos Passos
 
-- **P0** — Cadastrar no painel do GitHub os secrets exigidos pelo workflow
-  `.github/workflows/pentest-semanal.yml` (credenciais da branch `test` e das duas contas
-  `@example.test` de pentest) e disparar `workflow_dispatch` uma vez para confirmar o cron
-  semanal de verdade — a validação feita nesta entrega foi só estática (leitura do YAML), sem
-  runner do GitHub disponível na sessão.
-- **P0** — Deployar as correções de segurança desta sessão (ver ✅ Concluído, 2026-10-14):
-  Function via `npm run deploy` (exige deploy manual) e frontend via `git push` para `master`.
-  Sem isso, produção continua com o 503/aud/headers ausentes que a rotina já encontrou.
 - **P2** — Decidir e implementar Content-Security-Policy do frontend (Cloudflare Pages), hoje
   deliberadamente ausente de `public/_headers` porque exige mapear os `connect-src` reais
   (Function + Neon Auth, que variam por ambiente) sem quebrar a aplicação.
@@ -208,5 +200,16 @@ Nenhum item em andamento.
   achados médios de cabeçalhos ausentes: Function ganhou `secureHeaders` do Hono (CSP restritiva
   `default-src: 'none'` + HSTS/nosniff/X-Frame-Options/Referrer-Policy) e o frontend ganhou
   `public/_headers` (HSTS/X-Frame-Options/X-Content-Type-Options/Referrer-Policy, sem CSP —
-  decisão deliberada, ver Próximos Passos). Build, lint e 314 testes verdes (3 novos). Nada
-  deployado em produção ainda — 2026-10-14
+  decisão deliberada, ver Próximos Passos). Build, lint e 314 testes verdes (3 novos). Deployado
+  em `production` via `npm run deploy` e confirmado na prática (`/lancamentos` sem token devolve
+  401 com HSTS/CSP presentes) — 2026-10-14
+- [x] Senha das contas de teste do pentest trocada de timestamp previsível para CSPRNG
+  (`randomBytes(24)`); contas antigas removidas via `npm run manutencao:limpar-usuarios-teste` e
+  recriadas com a senha nova — achado de revisão automática de segurança, corrigido com TDD — 2026-10-14
+- [x] P0 do pentest concluído: os 10 secrets (`DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
+  `NEON_BRANCH`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `NEON_FUNCTION_API_BASE_URL`,
+  `PENTEST_CONTA_A_EMAIL`/`_SENHA`, `PENTEST_CONTA_B_EMAIL`/`_SENHA`) cadastrados no GitHub
+  Actions e o workflow `pentest-semanal.yml` disparado manualmente (`workflow_dispatch`) com
+  sucesso de ponta a ponta: rodou a rotina, comitou `docs/seguranca/relatorios/2026-10-14.md`
+  (13 achados) e pulou corretamente a abertura de issue (nenhum achado de severidade alta,
+  diferente da primeira execução) — 2026-10-14

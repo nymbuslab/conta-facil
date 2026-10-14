@@ -231,8 +231,8 @@ cada um é preenchido):
   `.env.test.local` (local) e cadastradas como *secret* do GitHub Actions (CI).
 - O workflow também usa como *secret* as mesmas `DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
   `NEON_BRANCH`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `NEON_FUNCTION_API_BASE_URL` da
-  branch `test` (cadastro manual no painel do GitHub é pré-requisito para o cron rodar de
-  verdade — o workflow só referencia os nomes).
+  branch `test`. Os 10 secrets estão cadastrados no GitHub Actions desde 2026-10-14 e o
+  workflow já foi validado de ponta a ponta via `workflow_dispatch`.
 
 ## Skills do projeto
 
