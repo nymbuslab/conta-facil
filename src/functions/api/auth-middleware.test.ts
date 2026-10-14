@@ -54,6 +54,20 @@ describe('authMiddleware', () => {
     expect(await resposta.json()).toEqual({ erro: 'Não autorizado' })
   })
 
+  it('responde 401 quando o algoritmo do token nao e permitido (codigo do jose)', async () => {
+    const app = criarApp(async () => {
+      throw Object.assign(new Error('"HS256" is not a permitted algorithm'), {
+        code: 'ERR_JOSE_ALG_NOT_ALLOWED',
+      })
+    })
+    const resposta = await app.request('/dados/usuario', {
+      headers: { Authorization: 'Bearer jwt-alg-nao-permitido' },
+    })
+
+    expect(resposta.status).toBe(401)
+    expect(await resposta.json()).toEqual({ erro: 'Não autorizado' })
+  })
+
   it('responde 503 quando o JWKS/servico de autenticacao esta indisponivel', async () => {
     const app = criarApp(async () => {
       throw Object.assign(new Error('jwks timeout'), { code: 'ERR_JWKS_TIMEOUT' })

@@ -108,7 +108,11 @@ corrido, não entra no filtro de mês.
   `status: 'carregando' | 'autenticado' | 'anonimo' | 'erro'` — falha transitória de verificação
   (JWKS fora do ar, rede) vira `'erro'` com `recarregarSessao()` (refetch), e `__root.tsx` mostra
   tela de nova tentativa em vez de mandar pro login. No backend, `auth-middleware` separa token
-  inválido/expirado (401) de serviço de auth indisponível (503); config ausente segue 500.
+  inválido/expirado/algoritmo não permitido (401, inclui o código `ERR_JOSE_ALG_NOT_ALLOWED` do
+  `jose` — achado real da rotina de pentest em 2026-10-14, token caía em 503 por engano) de
+  serviço de auth indisponível (503); config ausente segue 500. `jwtVerify` valida também `aud`
+  contra o próprio `issuer` (o Neon Auth emite os dois iguais) — outro achado real da mesma
+  rotina, confirmado contra a branch `test` real via `npm run test:integration:auth`.
 - **Formato do token do Neon Auth**: `cliente.token()` (plugin JWT) devolve `{ data: { token } }`;
   o objeto de `getSession()` devolve `{ data: { session: { token } } }` — este é o campo que a
   própria lib lê em `getJWTToken` (JWT injetado via header `set-auth-jwt`). `extrairToken`
@@ -138,6 +142,15 @@ corrido, não entra no filtro de mês.
   scripts de integração) são removidos por `npm run manutencao:limpar-usuarios-teste`
   (`scripts/limpar-usuarios-teste.mjs`); a cascata de FKs do `neon_auth` limpa sessão/conta
   junto.
+- **Cabeçalhos de segurança**: a Function usa `secureHeaders` do Hono (`hono/secure-headers`,
+  `src/functions/api/index.ts`) com CSP restritiva (`default-src: 'none'`, a API só serve JSON)
+  e os demais cabeçalhos (HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`)
+  nos valores padrão do pacote. O frontend (Cloudflare Pages) tem `public/_headers` com HSTS,
+  `X-Frame-Options`, `X-Content-Type-Options` e `Referrer-Policy` — **sem** `Content-Security-
+  Policy` ainda: o SPA faz fetch dinâmico para a Function e o Neon Auth (origens variam por
+  ambiente) e uma CSP errada no `connect-src` quebraria a aplicação inteira; decisão de CSP do
+  frontend fica para depois, deliberadamente. Os dois vieram de achados reais da rotina de
+  pentest em 2026-10-14.
 - **Domínio confiável do Neon Auth**: toda branch nova precisa ter o domínio do frontend
   registrado via `add_auth_trusted_domain` (MCP do Neon) ou no console — sem isso, `sign-up`/
   `sign-in` tomam `403` mesmo com CORS da Function liberado, porque é uma allowlist separada do

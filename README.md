@@ -21,6 +21,7 @@ npm run test -- --run
 npm run build
 npm run lint
 npm run audit:security
+npm run pentest
 npm run test:migrate
 npm run test:integration:idempotencia
 ```

@@ -8,13 +8,17 @@ Nenhum item em andamento.
 
 ## 📋 Próximos Passos
 
-- [ ] (P2) Validar visualmente em produção os três status de despesa (A vencer/Vencido/Pago),
-  já que esta entrega não foi conferida no navegador — abrir quando for mexer de novo nessa
-  tela ou antes do próximo deploy de frontend.
-- [ ] (P2) Validar visualmente em produção a paginação das listas (botão "Carregar mais",
-  navegação de mês e busca), a página de 5 itens e os ajustes de acessibilidade (foco/teclado) —
-  não conferidos no navegador; abrir quando for mexer de novo nessas telas ou antes do próximo
-  deploy de frontend.
+- **P0** — Cadastrar no painel do GitHub os secrets exigidos pelo workflow
+  `.github/workflows/pentest-semanal.yml` (credenciais da branch `test` e das duas contas
+  `@example.test` de pentest) e disparar `workflow_dispatch` uma vez para confirmar o cron
+  semanal de verdade — a validação feita nesta entrega foi só estática (leitura do YAML), sem
+  runner do GitHub disponível na sessão.
+- **P0** — Deployar as correções de segurança desta sessão (ver ✅ Concluído, 2026-10-14):
+  Function via `npm run deploy` (exige deploy manual) e frontend via `git push` para `master`.
+  Sem isso, produção continua com o 503/aud/headers ausentes que a rotina já encontrou.
+- **P2** — Decidir e implementar Content-Security-Policy do frontend (Cloudflare Pages), hoje
+  deliberadamente ausente de `public/_headers` porque exige mapear os `connect-src` reais
+  (Function + Neon Auth, que variam por ambiente) sem quebrar a aplicação.
 
 ## ✅ Concluído
 
@@ -179,3 +183,30 @@ Nenhum item em andamento.
   em produção com redeploy da Function — que ainda **não** estava implantada com a paginação (o
   `.deploy-state.json` apontava para o commit da idempotência). Build, lint e 219 testes verdes —
   2026-10-13 (build OK, UI não validada visualmente: exige login via Neon Auth)
+- [x] Validação visual em produção dos três status de despesa (A vencer/Vencido/Pago): confirmado
+  pelo usuário direto no app em produção — 2026-10-14
+- [x] Validação visual em produção da paginação de 5 itens, navegação de mês/busca e ajustes de
+  acessibilidade: confirmado pelo usuário direto no app em produção — 2026-10-14
+- [x] Rotina de pentest própria (`npm run pentest`, `scripts/pentest/`): checagens passivas sem
+  mutação contra `production` real (headers de segurança, CORS, erro verboso, autenticação) e
+  checagens ativas (IDOR em lançamentos/caixinhas, injeção em campos, cursor forjado, audience
+  do JWT) só contra a branch `test`, sempre atrás de `garantirBranchDeTeste()`. Relatório
+  markdown datado em `docs/seguranca/relatorios/AAAA-MM-DD.md`, workflow semanal
+  (`.github/workflows/pentest-semanal.yml`, fim de semana + disparo manual) com abertura
+  automática de issue em achado alta. 19 tasks das 4 sprints concluídas, mais 2 tasks de uma
+  rodada de convergência que corrigiu achados de erro de rede real sem achado (D-09) e de teste
+  apagando o relatório real do dia (D-10). Suíte inteira verde (311 passed, 2 skipped
+  pré-existentes, 92 testes novos), build e lint OK. A primeira execução real já encontrou e
+  documentou 2 achados reais de segurança (ver Próximos Passos) e 2 de severidade média
+  (cabeçalhos ausentes) — 2026-10-14 (ver `FECHAMENTO.md` de `rotina-pentest`; workflow do
+  GitHub Actions validado só estaticamente, sem runner disponível nesta sessão)
+- [x] Corrigidos com TDD os 2 achados reais que a rotina de pentest encontrou:
+  `authMiddleware` classificava token com algoritmo não permitido (código `ERR_JOSE_ALG_NOT_ALLOWED`
+  do `jose`) como 503 em vez de 401 — regex `CODIGOS_TOKEN_INVALIDO` ampliada; `jwtVerify` passou
+  a validar `audience` contra o próprio `issuer` (o Neon Auth emite os dois iguais, confirmado
+  contra a branch `test` real via `npm run test:integration:auth`). Também corrigidos os 2
+  achados médios de cabeçalhos ausentes: Function ganhou `secureHeaders` do Hono (CSP restritiva
+  `default-src: 'none'` + HSTS/nosniff/X-Frame-Options/Referrer-Policy) e o frontend ganhou
+  `public/_headers` (HSTS/X-Frame-Options/X-Content-Type-Options/Referrer-Policy, sem CSP —
+  decisão deliberada, ver Próximos Passos). Build, lint e 314 testes verdes (3 novos). Nada
+  deployado em produção ainda — 2026-10-14
