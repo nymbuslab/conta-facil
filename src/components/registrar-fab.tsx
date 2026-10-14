@@ -43,6 +43,7 @@ export function RegistrarFab() {
           className="size-14 rounded-full shadow-md"
           onClick={() => setAberto((valor) => !valor)}
           aria-expanded={aberto}
+          aria-haspopup="true"
           aria-label={aberto ? 'Fechar registrar lançamento' : 'Registrar lançamento'}
         >
           {aberto ? <X className="size-5" /> : <Plus className="size-5" />}

@@ -28,7 +28,7 @@ export function CaixinhaCard({ caixinha, onDepositar, onResgatar, onExcluir }: C
           type="button"
           onClick={() => onExcluir(caixinha)}
           aria-label={`Excluir caixinha ${caixinha.nome}`}
-          className="text-muted-foreground hover:text-destructive"
+          className="relative rounded-sm text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 after:absolute after:-inset-3.5 after:content-['']"
         >
           <Trash2 className="size-4" aria-hidden="true" />
         </button>

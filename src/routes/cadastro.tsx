@@ -121,7 +121,6 @@ export function TelaCadastro() {
                         size="icon"
                         className="absolute right-0 top-1/2 h-11 w-11 -translate-y-1/2 text-muted-foreground hover:bg-transparent hover:text-foreground"
                         aria-label={mostrarSenha ? 'Ocultar senhas' : 'Mostrar senhas'}
-                        aria-pressed={mostrarSenha}
                         onClick={() => setMostrarSenha((valor) => !valor)}
                       >
                         {mostrarSenha ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}

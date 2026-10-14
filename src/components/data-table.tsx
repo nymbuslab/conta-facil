@@ -7,6 +7,8 @@ interface DataTableProps<TData> {
   columns: ColumnDef<TData, unknown>[]
   data: TData[]
   mensagemVazio: string
+  /** Nome acessivel da tabela (ex.: "Receitas do mes"). */
+  ariaLabel?: string
   onRowClick?: (linha: TData) => void
   linhaDesabilitada?: (linha: TData) => boolean
 }
@@ -15,6 +17,7 @@ export function DataTable<TData>({
   columns,
   data,
   mensagemVazio,
+  ariaLabel,
   onRowClick,
   linhaDesabilitada,
 }: DataTableProps<TData>) {
@@ -38,7 +41,7 @@ export function DataTable<TData>({
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-card to-transparent"
         aria-hidden="true"
       />
-      <Table>
+      <Table aria-label={ariaLabel}>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
@@ -61,6 +64,17 @@ export function DataTable<TData>({
               <TableRow
                 key={row.id}
                 onClick={clicavel ? () => onRowClick?.(row.original) : undefined}
+                onKeyDown={
+                  clicavel
+                    ? (evento) => {
+                        if (evento.key === 'Enter' || evento.key === ' ') {
+                          evento.preventDefault()
+                          onRowClick?.(row.original)
+                        }
+                      }
+                    : undefined
+                }
+                tabIndex={clicavel ? 0 : undefined}
                 className={cn(clicavel && 'cursor-pointer')}
               >
                 {row.getVisibleCells().map((cell) => (
