@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "audit:security": "node scripts/auditar-dependencias.mjs",
+    "pentest": "node scripts/pentest/executar.mjs",
     "deploy": "node scripts/deploy.mjs",
     "test:db:reset": "node -e \"const { spawnSync } = require('node:child_process'); const bash = process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : 'bash'; const result = spawnSync(bash, ['scripts/neon-test-reset.sh'], { stdio: 'inherit' }); process.exit(result.status ?? 1)\"",
     "test:integration": "node --env-file=.env.test.local src/test/db-setup.ts",

@@ -3,7 +3,7 @@ expx_schema: 1
 expx_tool: sprintx
 kind: estimativa_historico
 trabalho_id: null
-atualizado_em: 2026-10-12
+atualizado_em: 2026-10-14
 unidade: h
 entradas:
   - trabalho_id: navegacao-inferior
@@ -578,21 +578,252 @@ entradas:
     real: 1.2
     desvio: null
     registrado_em: 2026-10-12
+  - trabalho_id: rotina-pentest
+    task_id: T-01.01
+    tipo_task: integracao_externa
+    area: criar contas de teste (Neon Auth)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.6
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-01.02
+    tipo_task: integracao_externa
+    area: helper de autenticacao ativa reusavel
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-01.03
+    tipo_task: infra
+    area: cliente HTTP para checagens
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-01.04
+    tipo_task: dominio
+    area: contrato de achado e ordenacao por severidade
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.2
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-01.05
+    tipo_task: dominio
+    area: montagem e gravacao do relatorio
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-02.01
+    tipo_task: integracao_externa
+    area: checador de headers de seguranca ausentes
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-02.02
+    tipo_task: integracao_externa
+    area: checador de CORS contra origem nao autorizada
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-02.03
+    tipo_task: integracao_externa
+    area: checador de erro verboso
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-02.04
+    tipo_task: integracao_externa
+    area: checador de resposta a token invalido
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-03.01
+    tipo_task: integracao_externa
+    area: checador de IDOR em lancamentos
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.6
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-03.02
+    tipo_task: integracao_externa
+    area: checador de IDOR em caixinhas
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.5
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-03.03
+    tipo_task: integracao_externa
+    area: checador de injecao em campos de busca e filtro
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-03.04
+    tipo_task: integracao_externa
+    area: checador de cursor forjado
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-03.05
+    tipo_task: integracao_externa
+    area: checador de audience do JWT
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-04.01
+    tipo_task: dominio
+    area: orquestrador da rotina de pentest
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.8
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-04.02
+    tipo_task: config
+    area: comando npm run pentest
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.2
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-04.03
+    tipo_task: infra
+    area: workflow semanal do GitHub Actions
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-04.04
+    tipo_task: infra
+    area: abertura de issue em achado critico
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-04.05
+    tipo_task: documentacao
+    area: documentacao da rotina no CLAUDE.md
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-05.01
+    tipo_task: refatoracao
+    area: achado informativo de indisponibilidade (convergencia C-01)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-14
+  - trabalho_id: rotina-pentest
+    task_id: T-05.02
+    tipo_task: teste
+    area: isolamento do teste de gravacao do relatorio (convergencia C-02)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-14
 calibracao:
   - tipo_task: infra
-    entradas: 13
+    entradas: 16
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: teste
-    entradas: 8
+    entradas: 9
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: refatoracao
-    entradas: 2
+    entradas: 3
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: dominio
-    entradas: 11
+    entradas: 14
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: ui
@@ -600,7 +831,15 @@ calibracao:
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: documentacao
-    entradas: 5
+    entradas: 6
+    desvio_medio: 0
+    fator_ativo: false
+  - tipo_task: integracao_externa
+    entradas: 11
+    desvio_medio: 0
+    fator_ativo: false
+  - tipo_task: config
+    entradas: 1
     desvio_medio: 0
     fator_ativo: false
 ---
@@ -688,7 +927,40 @@ Os dois trabalhos foram executados sem estimativa F3.5. As entradas registram so
 | idempotencia-escrita-financeira | T-02.06 | dominio | contextos financeiros idempotentes | 0,7 h |
 | idempotencia-escrita-financeira | T-02.07 | teste | concorrência e rollback no Neon test | 1,2 h |
 
-**Total:** 52 tasks, 28,5 h de esforço real registrado.
+**Total (antes de rotina-pentest):** 52 tasks, 28,5 h de esforço real registrado.
+
+## Entradas — rotina-pentest (F6, sem F3.5)
+
+Feature executada direto da F5 (auditoria, veredito SIM) para a F6, sem estimativa prévia. As
+19 tasks das 4 sprints concluíram verdes, mais 2 tasks de uma rodada de convergência
+(sprint-05) que corrigiu dois achados MÉDIA (C-01: D-09 não realizado em erro de rede real;
+C-02: teste apagando o relatório real do dia) encontrados pelo `auditor-convergencia`.
+
+| Trabalho | Task | Tipo | Área | Real |
+|---|---|---|---|---|
+| rotina-pentest | T-01.01 | integracao_externa | criar contas de teste (Neon Auth) | 0,6 h |
+| rotina-pentest | T-01.02 | integracao_externa | helper de autenticação ativa reusável | 0,3 h |
+| rotina-pentest | T-01.03 | infra | cliente HTTP para checagens | 0,3 h |
+| rotina-pentest | T-01.04 | dominio | contrato de achado e ordenação por severidade | 0,2 h |
+| rotina-pentest | T-01.05 | dominio | montagem e gravação do relatório | 0,3 h |
+| rotina-pentest | T-02.01 | integracao_externa | checador de headers de segurança ausentes | 0,4 h |
+| rotina-pentest | T-02.02 | integracao_externa | checador de CORS contra origem não autorizada | 0,3 h |
+| rotina-pentest | T-02.03 | integracao_externa | checador de erro verboso | 0,3 h |
+| rotina-pentest | T-02.04 | integracao_externa | checador de resposta a token inválido | 0,4 h |
+| rotina-pentest | T-03.01 | integracao_externa | checador de IDOR em lançamentos | 0,6 h |
+| rotina-pentest | T-03.02 | integracao_externa | checador de IDOR em caixinhas | 0,5 h |
+| rotina-pentest | T-03.03 | integracao_externa | checador de injeção em campos de busca e filtro | 0,4 h |
+| rotina-pentest | T-03.04 | integracao_externa | checador de cursor forjado | 0,4 h |
+| rotina-pentest | T-03.05 | integracao_externa | checador de audience do JWT | 0,4 h |
+| rotina-pentest | T-04.01 | dominio | orquestrador da rotina de pentest | 0,8 h |
+| rotina-pentest | T-04.02 | config | comando npm run pentest | 0,2 h |
+| rotina-pentest | T-04.03 | infra | workflow semanal do GitHub Actions | 0,4 h |
+| rotina-pentest | T-04.04 | infra | abertura de issue em achado crítico | 0,3 h |
+| rotina-pentest | T-04.05 | documentacao | documentação da rotina no CLAUDE.md | 0,3 h |
+| rotina-pentest | T-05.01 | refatoracao | achado informativo de indisponibilidade (convergência C-01) | 0,4 h |
+| rotina-pentest | T-05.02 | teste | isolamento do teste de gravação do relatório (convergência C-02) | 0,3 h |
+
+**Total:** 73 tasks, 36,6 h de esforço real registrado.
 
 ## Calibração por tipo de task
 
@@ -699,12 +971,14 @@ só para contar quantas tasks de cada tipo já têm `real` registrado. `fator_at
 
 | Tipo de task | Entradas | Desvio médio | Fator ativo? |
 |---|---|---|---|
-| infra | 13 | não calculável (sem estimativa) | não |
-| teste | 8 | não calculável (sem estimativa) | não |
-| refatoracao | 2 | não calculável (sem estimativa) | não |
-| dominio | 11 | não calculável (sem estimativa) | não |
+| infra | 16 | não calculável (sem estimativa) | não |
+| teste | 9 | não calculável (sem estimativa) | não |
+| refatoracao | 3 | não calculável (sem estimativa) | não |
+| dominio | 14 | não calculável (sem estimativa) | não |
 | ui | 13 | não calculável (sem estimativa) | não |
-| documentacao | 5 | não calculável (sem estimativa) | não |
+| documentacao | 6 | não calculável (sem estimativa) | não |
+| integracao_externa | 11 | não calculável (sem estimativa) | não |
+| config | 1 | não calculável (sem estimativa) | não |
 
 ## Como se calcula o desvio
 

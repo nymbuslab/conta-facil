@@ -24,6 +24,7 @@ npm run dev      # servidor local
 npm run test     # suíte vitest
 npm run build    # typecheck + build de produção
 npm run audit:security                 # falha em alerta alto/crítico ou erro de rede
+npm run pentest                         # rotina de segurança — ver seção "Rotina de pentest"
 npm run test:migrate                   # aplica migrations somente em test/test-*
 npm run test:integration:idempotencia  # concorrência e rollback no Postgres de teste
 npm run manutencao:limpar-idempotencias     # apaga idempotencias com mais de 90 dias
@@ -196,6 +197,29 @@ e Auth; frontend publicado no Cloudflare Pages (projeto `conta-facil`) no domín
   em produção). Se a Function ou o Auth mudarem de URL (troca de branch, recriação do projeto
   Neon), as duas precisam ser atualizadas juntas no painel do Cloudflare Pages ou via API
   (`PATCH /accounts/{id}/pages/projects/conta-facil`, campo `deployment_configs.*.env_vars`).
+
+## Rotina de pentest
+
+`npm run pentest` (`scripts/pentest/`) roda checagens passivas contra `production` real (sem
+mutação: headers de segurança, CORS, erro verboso, autenticação) e checagens ativas (IDOR,
+injeção, cursor forjado, audience do JWT) só contra a branch `test`, reusando
+`garantirBranchDeTeste()`/`confirmarIdentidadeConexao()`. A rotina só relata — nenhuma correção é
+aplicada automaticamente. Um relatório markdown novo é gravado por execução em
+`docs/seguranca/relatorios/AAAA-MM-DD.md` (histórico versionado, nunca sobrescrito). Agendamento
+semanal (fim de semana) via `.github/workflows/pentest-semanal.yml`, com disparo manual
+(`workflow_dispatch`) e abertura automática de issue quando há achado de severidade alta.
+`npm run audit:security` é só citado no relatório, não duplicado.
+
+Env vars/secrets novos desta rotina (nomes apenas, sem valor — ver seção "Env vars" para onde
+cada um é preenchido):
+
+- `PENTEST_CONTA_A_EMAIL`, `PENTEST_CONTA_A_SENHA`, `PENTEST_CONTA_B_EMAIL`,
+  `PENTEST_CONTA_B_SENHA` — as duas contas `@example.test` dos checadores de IDOR; gravadas em
+  `.env.test.local` (local) e cadastradas como *secret* do GitHub Actions (CI).
+- O workflow também usa como *secret* as mesmas `DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
+  `NEON_BRANCH`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `NEON_FUNCTION_API_BASE_URL` da
+  branch `test` (cadastro manual no painel do GitHub é pré-requisito para o cron rodar de
+  verdade — o workflow só referencia os nomes).
 
 ## Skills do projeto
 
