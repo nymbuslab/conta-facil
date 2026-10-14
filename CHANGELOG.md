@@ -2,6 +2,11 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-13 — Listas com 5 itens por vez
+
+- As listas de receitas, despesas e caixinhas passam a mostrar 5 itens por vez, com o botão
+  "Carregar mais" trazendo o restante — cabe melhor na tela do celular.
+
 ## 2026-10-13 — Listas trafegam só o necessário
 
 - As listas de lançamentos e caixinhas agora enviam pela rede apenas os campos que a tela usa: cada

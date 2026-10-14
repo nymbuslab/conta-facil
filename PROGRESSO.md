@@ -11,6 +11,10 @@ Nenhum item em andamento.
 - [ ] (P2) Validar visualmente em produção os três status de despesa (A vencer/Vencido/Pago),
   já que esta entrega não foi conferida no navegador — abrir quando for mexer de novo nessa
   tela ou antes do próximo deploy de frontend.
+- [ ] (P2) Validar visualmente em produção a paginação das listas (botão "Carregar mais",
+  navegação de mês e busca), a página de 5 itens e os ajustes de acessibilidade (foco/teclado) —
+  não conferidos no navegador; abrir quando for mexer de novo nessas telas ou antes do próximo
+  deploy de frontend.
 
 ## ✅ Concluído
 
@@ -146,12 +150,12 @@ Nenhum item em andamento.
   clique, falha de API, optimistic + rollback, movimento reduzido). Build, lint e 203
   testes verdes — 2026-10-13 (UI não validada visualmente: o app exige login via Neon
   Auth, serviço externo)
-- [x] Listas por cursor e filtros no servidor: Início e Caixinhas buscam páginas de 5 (botão
+- [x] Listas por cursor e filtros no servidor: Início e Caixinhas buscam páginas de 20 (botão
   "Carregar mais") filtradas por mês/busca; o total do mês vem de `/lancamentos/resumo` e o mês
   passou a ser navegável (`FiltrosLancamentos`, "Mês anterior"/"Próximo mês"). A tela Parcelas
   consome `/lancamentos/parcelamentos` (agrupado por `parcelamento_id`) em vez de baixar cada
-  parcela, com recarga por `versaoParcelamentos`. Medição: com 300 lançamentos o `GET` devolve 5
-  (default `limite: 5`, provado no teste da Function), ~98% menos linhas por requisição; novos
+  parcela, com recarga por `versaoParcelamentos`. Medição: com 300 lançamentos o `GET` devolve 20
+  (default `limite: 20`, provado no teste da Function), ~93% menos linhas por requisição; novos
   índices `(user_id, criado_em, id)` em `drizzle/0002_paginacao_indices.sql`. Build, lint e 213
   testes verdes — 2026-10-13 (UI não validada visualmente: exige login via Neon Auth; a migration
   de índices foi aplicada em `production` em 2026-10-13 — a branch `test` segue sem os índices, o
@@ -169,3 +173,9 @@ Nenhum item em andamento.
   passou a provar isolamento pela contagem SQL e a recusar qualquer campo interno no payload.
   Build, lint e 219 testes verdes (6 novos); integração real contra a branch `test`
   (`test:integration:lancamentos` e `test:integration:caixinhas`) passou — 2026-10-13
+- [x] Página das listas reduzida de 20 para 5 itens (melhor no celular): `LIMITE_PADRAO` da
+  paginação por cursor passou a 5 (receitas, despesas e caixinhas); o mock dos testes passou a
+  usar o mesmo `LIMITE_PADRAO` (antes fixava 20) e a asserção da Function foi ajustada. Publicado
+  em produção com redeploy da Function — que ainda **não** estava implantada com a paginação (o
+  `.deploy-state.json` apontava para o commit da idempotência). Build, lint e 219 testes verdes —
+  2026-10-13 (build OK, UI não validada visualmente: exige login via Neon Auth)
