@@ -145,11 +145,14 @@ corrido, não entra no filtro de mês.
 - **Cabeçalhos de segurança**: a Function usa `secureHeaders` do Hono (`hono/secure-headers`,
   `src/functions/api/index.ts`) com CSP restritiva (`default-src: 'none'`, a API só serve JSON)
   e os demais cabeçalhos (HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`)
-  nos valores padrão do pacote. O frontend (Cloudflare Pages) tem `public/_headers` com HSTS,
-  `X-Frame-Options`, `X-Content-Type-Options` e `Referrer-Policy` — **sem** `Content-Security-
-  Policy` ainda: o SPA faz fetch dinâmico para a Function e o Neon Auth (origens variam por
-  ambiente) e uma CSP errada no `connect-src` quebraria a aplicação inteira; decisão de CSP do
-  frontend fica para depois, deliberadamente. Os dois vieram de achados reais da rotina de
+  nos valores padrão do pacote. O frontend (Cloudflare Pages) gera `dist/_headers` **no build**
+  (plugin Vite `headersDeProducao` em `vite.config.ts`, conteúdo montado por
+  `scripts/gerar-headers-producao.mjs`), não como arquivo estático em `public/` — a CSP inclui
+  `connect-src` com a origem real da Function e do Neon Auth do momento do build (variam por
+  ambiente), além de HSTS, `X-Frame-Options`, `X-Content-Type-Options` e `Referrer-Policy`.
+  Validado num servidor local servindo `dist/` com os headers reais (via Playwright): login
+  carrega, fontes do Google Fonts carregam, e o fetch de autenticação chega ao Neon Auth sem
+  bloqueio de CSP. Os dois cabeçalhos (Function e frontend) vieram de achados reais da rotina de
   pentest em 2026-10-14.
 - **Domínio confiável do Neon Auth**: toda branch nova precisa ter o domínio do frontend
   registrado via `add_auth_trusted_domain` (MCP do Neon) ou no console — sem isso, `sign-up`/

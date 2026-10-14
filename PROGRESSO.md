@@ -8,9 +8,7 @@ Nenhum item em andamento.
 
 ## 📋 Próximos Passos
 
-- **P2** — Decidir e implementar Content-Security-Policy do frontend (Cloudflare Pages), hoje
-  deliberadamente ausente de `public/_headers` porque exige mapear os `connect-src` reais
-  (Function + Neon Auth, que variam por ambiente) sem quebrar a aplicação.
+_(nada no momento)_
 
 ## ✅ Concluído
 
@@ -213,3 +211,11 @@ Nenhum item em andamento.
   sucesso de ponta a ponta: rodou a rotina, comitou `docs/seguranca/relatorios/2026-10-14.md`
   (13 achados) e pulou corretamente a abertura de issue (nenhum achado de severidade alta,
   diferente da primeira execução) — 2026-10-14
+- [x] P2 concluído: Content-Security-Policy do frontend implementada. `dist/_headers` passou a
+  ser gerado no build (plugin Vite `headersDeProducao`, conteúdo de
+  `scripts/gerar-headers-producao.mjs`) em vez de estático, porque a CSP precisa da origem real
+  da Function e do Neon Auth, que só existem no momento do build. `public/_headers` removido
+  (substituído pela geração). Validado servindo `dist/` com os headers reais via Playwright:
+  página de login carrega, fontes do Google Fonts carregam e o fetch de login chega ao Neon
+  Auth sem bloqueio de CSP (401 da credencial falsa de teste, não da CSP). Build, lint e 319
+  testes verdes (4 novos) — 2026-10-14
