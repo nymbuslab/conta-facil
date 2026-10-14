@@ -47,7 +47,7 @@ src/
 Fluxo de dados: `LancamentosProvider` e `CaixinhasProvider` (montados em `__root.tsx`) carregam e
 alteram dados pela Neon Function usando `api-client.ts`; a resposta persistida atualiza o estado
 React. Cada mutação passa por uma função do contexto, nunca por `setState` direto no componente. As
-listas são **paginadas por cursor** (chunk de 20, botão "Carregar mais") e filtradas no **servidor**
+listas são **paginadas por cursor** (chunk de 5, botão "Carregar mais") e filtradas no **servidor**
 por mês e busca; o total exibido vem de endpoints agregados (`/lancamentos/resumo` e
 `/lancamentos/parcelamentos`), não da soma das páginas carregadas. "Guardado" (caixinhas) é saldo
 corrido, não entra no filtro de mês.
@@ -66,7 +66,7 @@ corrido, não entra no filtro de mês.
 - **Tabelas responsivas**: `DataTable` (`components/data-table.tsx`) e as primitivas de
   `ui/table.tsx` usam padding menor + `overflow-auto` no mobile; descrição trunca com reticências
   nas listas, detalhe completo só aparece no modal de pagamento.
-- **Listas paginadas por cursor**: receitas, despesas e caixinhas chegam em páginas de 20 (botão
+- **Listas paginadas por cursor**: receitas, despesas e caixinhas chegam em páginas de 5 (botão
   "Carregar mais") filtradas no **servidor** por mês/busca; o total do mês e os parcelamentos vêm
   de `/lancamentos/resumo` e `/lancamentos/parcelamentos` (agrupado), nunca da soma das páginas.
   O contexto expõe `versaoParcelamentos`, observado pela tela Parcelas para recarregar sem nova

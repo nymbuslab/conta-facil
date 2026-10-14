@@ -1,16 +1,16 @@
 import type { ApiClient } from '@/lib/api-client'
 import { adicionarMeses } from '@/lib/datas'
 import { lancamentosIniciais } from '@/lib/mock-data'
+import { LIMITE_PADRAO } from '@/lib/paginacao'
 
 type Registro = Record<string, unknown>
 
-const LIMITE_MOCK = 20
-
 /** Cursor opaco por deslocamento: o cliente so devolve o token, entao o formato do backend
- * (keyset por criadoEm/id) nao importa para os testes de UI. */
+ * (keyset por criadoEm/id) nao importa para os testes de UI. O tamanho da pagina acompanha o
+ * padrao real (`LIMITE_PADRAO`) para os testes de UI refletirem a paginacao de producao. */
 function paginar<T>(itens: T[], cursor: string | null) {
   const inicio = cursor ? Number(atob(cursor)) || 0 : 0
-  const fatia = itens.slice(inicio, inicio + LIMITE_MOCK)
+  const fatia = itens.slice(inicio, inicio + LIMITE_PADRAO)
   const fim = inicio + fatia.length
   return {
     itens: fatia,

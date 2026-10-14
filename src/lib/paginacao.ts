@@ -2,7 +2,7 @@
  * puras e usam só APIs presentes nos dois ambientes (btoa/atob), então o mesmo cursor que o
  * cliente recebe volta intacto na próxima página. */
 
-export const LIMITE_PADRAO = 20
+export const LIMITE_PADRAO = 5
 export const LIMITE_MAXIMO = 100
 
 /** Posição de continuação: a última linha já entregue, por (criadoEm, id). O id desempata

@@ -74,7 +74,7 @@ describe('rotas de lancamentos', () => {
     expect(await resposta.json()).toEqual({ itens: [], proximoCursor: null })
     expect(repositorio.listar).toHaveBeenCalledWith(
       'usuario-1',
-      expect.objectContaining({ limite: 20 }),
+      expect.objectContaining({ limite: 5 }),
     )
   })
 

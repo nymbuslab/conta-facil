@@ -146,12 +146,12 @@ Nenhum item em andamento.
   clique, falha de API, optimistic + rollback, movimento reduzido). Build, lint e 203
   testes verdes — 2026-10-13 (UI não validada visualmente: o app exige login via Neon
   Auth, serviço externo)
-- [x] Listas por cursor e filtros no servidor: Início e Caixinhas buscam páginas de 20 (botão
+- [x] Listas por cursor e filtros no servidor: Início e Caixinhas buscam páginas de 5 (botão
   "Carregar mais") filtradas por mês/busca; o total do mês vem de `/lancamentos/resumo` e o mês
   passou a ser navegável (`FiltrosLancamentos`, "Mês anterior"/"Próximo mês"). A tela Parcelas
   consome `/lancamentos/parcelamentos` (agrupado por `parcelamento_id`) em vez de baixar cada
-  parcela, com recarga por `versaoParcelamentos`. Medição: com 300 lançamentos o `GET` devolve 20
-  (default `limite: 20`, provado no teste da Function), ~93% menos linhas por requisição; novos
+  parcela, com recarga por `versaoParcelamentos`. Medição: com 300 lançamentos o `GET` devolve 5
+  (default `limite: 5`, provado no teste da Function), ~98% menos linhas por requisição; novos
   índices `(user_id, criado_em, id)` em `drizzle/0002_paginacao_indices.sql`. Build, lint e 213
   testes verdes — 2026-10-13 (UI não validada visualmente: exige login via Neon Auth; a migration
   de índices foi aplicada em `production` em 2026-10-13 — a branch `test` segue sem os índices, o
