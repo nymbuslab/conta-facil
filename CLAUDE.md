@@ -1,7 +1,7 @@
 # Conta Fácil
 
 App de controle financeiro pessoal (protótipo em evolução para produto real). Mobile-first, tela
-Início mostra o mês vigente, caixinhas (poupança por objetivo) e parcelamentos.
+Início mostra o mês selecionado (navegável), caixinhas (poupança por objetivo) e parcelamentos.
 
 Repositório: https://github.com/nymbuslab/conta-facil (privado)
 
@@ -39,23 +39,26 @@ src/
   state/            auth e contextos remotos de lançamentos e caixinhas
   db/               schema Drizzle de lançamentos, caixinhas e idempotências
   functions/api/    API Hono autenticada por JWT
-  hooks/            use-saldo-acumulado (combina receitas/despesas filtradas + caixinhas)
+  hooks/            use-saldo-acumulado (saldo do mês + caixinhas)
   lib/              cliente HTTP autenticado, formatters e utilitários de data
   types/            schemas zod + interfaces (Lancamento = Receita | Despesa, Caixinha)
 ```
 
 Fluxo de dados: `LancamentosProvider` e `CaixinhasProvider` (montados em `__root.tsx`) carregam e
 alteram dados pela Neon Function usando `api-client.ts`; a resposta persistida atualiza o estado
-React. Cada mutação passa por uma função do contexto, nunca por `setState` direto no componente. A tela
-Início (`routes/index.tsx`) filtra receitas e despesas pelo **mês vigente** antes de somar e
-listar — "Guardado" (caixinhas) é saldo corrido, não entra nesse filtro.
+React. Cada mutação passa por uma função do contexto, nunca por `setState` direto no componente. As
+listas são **paginadas por cursor** (chunk de 20, botão "Carregar mais") e filtradas no **servidor**
+por mês e busca; o total exibido vem de endpoints agregados (`/lancamentos/resumo` e
+`/lancamentos/parcelamentos`), não da soma das páginas carregadas. "Guardado" (caixinhas) é saldo
+corrido, não entra no filtro de mês.
 
 ## Decisões de arquitetura
 
 - **Despesa não tem data de emissão**, só vencimento — simplificação pedida explicitamente; o
   modelo antigo tinha os dois campos e uma regra de validação cruzada que foi removida.
-- **Mês vigente** definido por `ehMesVigente` (`src/lib/datas.ts`), comparando ano/mês da data
-  contra `new Date()` do ambiente — não há seletor de mês na UI ainda.
+- **Filtro de mês**: o mês mostrado vem de `mesAtual` (`src/lib/datas.ts`) e o usuário navega com
+  `FiltrosLancamentos` (`components/filtros-lancamentos.tsx`, "Mês anterior"/"Próximo mês") e busca
+  por descrição (debounce). `ehMesVigente` segue existindo para comparar com o mês corrente.
 - **Parcelamento**: o usuário informa o valor de cada parcela, não o total — a Function multiplica
   esse valor pela quantidade de parcelas para gerar as N linhas, todas com o mesmo valor (mudança
   de 2026-10-11; antes era o inverso, dividindo um valor total com a sobra de centavos na última
@@ -63,8 +66,25 @@ listar — "Guardado" (caixinhas) é saldo corrido, não entra nesse filtro.
 - **Tabelas responsivas**: `DataTable` (`components/data-table.tsx`) e as primitivas de
   `ui/table.tsx` usam padding menor + `overflow-auto` no mobile; descrição trunca com reticências
   nas listas, detalhe completo só aparece no modal de pagamento.
+- **Listas paginadas por cursor**: receitas, despesas e caixinhas chegam em páginas de 20 (botão
+  "Carregar mais") filtradas no **servidor** por mês/busca; o total do mês e os parcelamentos vêm
+  de `/lancamentos/resumo` e `/lancamentos/parcelamentos` (agrupado), nunca da soma das páginas.
+  O contexto expõe `versaoParcelamentos`, observado pela tela Parcelas para recarregar sem nova
+  navegação após criar um parcelamento ou marcar uma parcela como paga.
 - **Dialogs**: todo `DialogContent` (`ui/dialog.tsx`) tem margem lateral fixa no mobile
   (`w-[calc(100%-2rem)]`) — nunca encostar nas bordas da tela.
+- **Feedback de operação assíncrona**: toda mutação desabilita o próprio botão e troca o
+  texto durante o envio (`formState.isSubmitting` nos modais; prop `processando` em
+  `confirmar-pagamento-dialog`) — evita duplo toque e dá sinal de que algo está acontecendo.
+  `marcarComoPaga` e `excluirCaixinha` são **otimistas com rollback** no contexto (a UI
+  responde na hora; em falha o estado volta e o erro aparece — banner inline em
+  `caixinhas.tsx` para exclusão). As demais mutações só mostram pending. `recarregar()` não
+  limpa mais a lista, então uma recarga com dados na tela mantém o conteúdo; skeleton (por
+  tela, em `estado-dados.tsx`) só aparece na primeira carga (`semDados`) e erro de load só
+  substitui a tela quando não há dados. Mensagens de erro de mutação passam por
+  `mensagemErroApi` (`lib/api-client.ts`), que mapeia 401/403 para "Sua sessão expirou. Entre
+  novamente." e `TypeError` (rede) para aviso de conexão. `index.css` desliga animações sob
+  `prefers-reduced-motion`.
 - **Persistência**: optou por **Neon Functions + Neon Managed Auth** como camada de API entre o
   SPA e o Postgres — o Postgres nunca é exposto direto ao browser. A Data API foi descartada
   (decisão revertida em 2026-10-10, D-02 em

@@ -2,6 +2,37 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-13 — Listas trafegam só o necessário
+
+- As listas de lançamentos e caixinhas agora enviam pela rede apenas os campos que a tela usa: cada
+  página ficou cerca de 38% menor e o identificador interno da conta deixou de acompanhar cada item.
+
+## 2026-10-13 — Listas mais leves e filtros de mês e busca
+
+- As listas de receitas, despesas e caixinhas agora carregam aos poucos (botão "Carregar mais"),
+  então abrir a tela continua rápido mesmo com muitos lançamentos.
+- Dá para navegar entre os meses e buscar por descrição na tela Início.
+- Os totais do mês vêm do servidor, e a tela Parcelas mostra o resumo de cada parcelamento sem
+  precisar baixar todas as parcelas.
+
+## 2026-10-13 — Interface mais responsiva e acessível
+
+- Ações que dependem da rede agora dão sinal claro de que estão acontecendo: o botão desabilita e
+  muda o texto ("Registrando...", "Criando...", "Confirmando...") enquanto a operação não termina,
+  e o mesmo toque repetido não cria lançamento duplicado.
+- Marcar uma despesa como paga e excluir uma caixinha aparecem na hora; se a operação falhar, a
+  tela volta ao estado anterior e avisa o que aconteceu, sem perder o que você digitou.
+- Ao recarregar os dados, o que já está na tela continua visível em vez de sumir; as telas agora
+  mostram um esqueleto com o formato do conteúdo enquanto a primeira carga não chega.
+- Ajustes de acessibilidade em toda a interface (rótulos, foco visível, área de toque e contraste)
+  e respeito à preferência "reduzir movimento" do sistema: as animações são desligadas.
+
+## 2026-10-13 — Ícone e logo próprios do Conta Fácil
+
+- Novo ícone do app (aba do navegador e atalho de celular), com a identidade visual do Conta Fácil.
+- As telas de entrar e criar conta agora mostram a logo em destaque, no lugar do cabeçalho genérico.
+- O cabeçalho das telas principais também ganhou o ícone ao lado do nome do app.
+
 ## 2026-10-13 — Status de despesa com data de vencimento
 
 - A lista de despesas agora distingue "A vencer" de "Vencido" (vermelho), além de "Pago"

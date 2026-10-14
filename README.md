@@ -52,6 +52,11 @@ mutação e a resposta na mesma transação. As decisões e o histórico ficam e
 `docs/sprintx/features/integracao-neon/` e
 `docs/sprintx/features/idempotencia-escrita-financeira/`.
 
+As listas (lançamentos e caixinhas) usam paginação por cursor com filtro de mês e busca no
+servidor; os totais do mês (`/lancamentos/resumo`) e os parcelamentos (`/lancamentos/parcelamentos`,
+agrupados) vêm de endpoints dedicados, não da soma das páginas carregadas. Os índices `(user_id,
+criado_em, id)` que sustentam a paginação estão em `drizzle/0002_paginacao_indices.sql`.
+
 ## Estado da entrega
 
 Em produção: `https://contafacil.nymbuslab.com.br`. A branch Neon `production` tem o schema de

@@ -2,7 +2,7 @@
 
 ## Visão
 
-App mobile-first de controle financeiro pessoal com conta própria, visão do mês vigente,
+App mobile-first de controle financeiro pessoal com conta própria, visão do mês selecionado,
 caixinhas por objetivo e acompanhamento de parcelamentos.
 
 ## Onde estamos
@@ -14,12 +14,15 @@ publicado no Cloudflare Pages em `https://contafacil.nymbuslab.com.br` com deplo
 partir do push em `master`, golden path validado de ponta a ponta. A idempotência financeira
 (lançamentos, depósito e resgate) também está implantada em `production` desde 2026-10-13.
 
+As listas (Início e Caixinhas) são paginadas por cursor com filtro de mês e busca no servidor, e a
+tela Início permite navegar entre os meses; os totais e os parcelamentos vêm de endpoints
+agregados.
+
 ## Prioridades
 
 _(nada no momento)_
 
 ## Fora de escopo (por ora)
 
-- Seletor de mês na tela Início
 - Múltiplos usuários em uma conta compartilhada
 - Relatórios ou exportação de dados

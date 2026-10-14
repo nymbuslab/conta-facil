@@ -118,3 +118,54 @@ Nenhum item em andamento.
   `estaVencida` em `src/lib/datas.ts`), sem mudança de schema, API ou banco. Build e 191
   testes verdes — 2026-10-13 (build OK, UI não validada visualmente: o app exige login via
   Neon Auth, serviço externo, e eu não entro com credenciais sem o usuário logar)
+- [x] Ícone personalizado do Conta Fácil criado e aplicado como favicon: conceito
+  "C-moeda" (anel aberto em azul sólido da marca, sem gradiente), escolhido entre 3
+  propostas. Build e testes verdes; validado no navegador e confirmado em produção
+  (conteúdo servido correto) — 2026-10-13
+- [x] Logo em destaque: telas de entrar e criar conta trocaram o cabeçalho azul
+  genérico pelo ícone + nome "Conta Fácil" centralizados acima do formulário
+  (componente MarcaDestaque, reusado nas duas telas); o cabeçalho das telas
+  autenticadas (TopoMarca) ganhou o mesmo ícone ao lado do nome. Build, 191 testes,
+  validação visual no navegador (login/cadastro) e confirmação do usuário direto na
+  tela autenticada logada — 2026-10-13
+- [x] Acessibilidade: 6 correções aplicadas — botão de fechar do dialogo com rótulo
+  "Fechar", foco/aria-label na linha de despesa clicável, foco visível e alvo de toque
+  de 44px no card de caixinha, remoção de `aria-pressed` indevido em entrar/criar conta
+  e `aria-haspopup` no botão de novo lançamento. Adicionado `jest-axe` e a suíte
+  `src/components/acessibilidade.test.tsx` (6 testes, violações zero). Build, lint e 197
+  testes verdes — 2026-10-13
+- [x] Fluxos assíncronos com feedback e resiliência: todo submit ganhou estado de envio
+  e `disabled` ("Registrando...", "Criando...", "Confirmando...", "Marcando..." nos
+  diálogos); skeletons fiéis ao layout por tela (Início, Caixinhas, Parcelas) no lugar
+  do bloco genérico; "marcar como paga" e "excluir caixinha" agora são otimistas com
+  rollback no contexto (a lista reverte e avisa se a Function falhar); `recarregar` não
+  limpa mais a lista (uma recarga com dados na tela mantém o conteúdo); erro de sessão
+  (401/403) mapeado para mensagem "Sua sessão expirou. Entre novamente." via
+  `mensagemErroApi`; bloco `@media (prefers-reduced-motion: reduce)` no `index.css`.
+  Suíte `src/components/fluxos-assincronos.test.tsx` (6 testes: rede lenta, duplo
+  clique, falha de API, optimistic + rollback, movimento reduzido). Build, lint e 203
+  testes verdes — 2026-10-13 (UI não validada visualmente: o app exige login via Neon
+  Auth, serviço externo)
+- [x] Listas por cursor e filtros no servidor: Início e Caixinhas buscam páginas de 20 (botão
+  "Carregar mais") filtradas por mês/busca; o total do mês vem de `/lancamentos/resumo` e o mês
+  passou a ser navegável (`FiltrosLancamentos`, "Mês anterior"/"Próximo mês"). A tela Parcelas
+  consome `/lancamentos/parcelamentos` (agrupado por `parcelamento_id`) em vez de baixar cada
+  parcela, com recarga por `versaoParcelamentos`. Medição: com 300 lançamentos o `GET` devolve 20
+  (default `limite: 20`, provado no teste da Function), ~93% menos linhas por requisição; novos
+  índices `(user_id, criado_em, id)` em `drizzle/0002_paginacao_indices.sql`. Build, lint e 213
+  testes verdes — 2026-10-13 (UI não validada visualmente: exige login via Neon Auth; a migration
+  de índices foi aplicada em `production` em 2026-10-13 — a branch `test` segue sem os índices, o
+  que não afeta os testes de integração)
+- [x] Investigação de N+1 e corte de overfetch nas listas: mapeado o caminho rota → Function →
+  Drizzle → Postgres de cada tela — **não há N+1 clássico** (contagem de queries constante em N:
+  Início 5, Parcelas 1, Caixinhas 2, tudo em `Promise.all`/agregação SQL; nenhum `for`/`map` com
+  `await`). Corrigido o `SELECT *` de `lancamentos.listar` e `caixinhas.listar` para projeção
+  explícita de colunas: a listagem deixou de devolver `userId`, `criadoEm` e `atualizadoEm`
+  (nenhum usado pela tela; `criadoEm` agora só no servidor, para o cursor). Medição com dados reais
+  (leitura na branch `production`): payload/página de `GET /lancamentos` 7.379 → 4.584 bytes
+  (−37,9%, ~147 bytes/linha) e de `GET /caixinhas` 265 → 118 bytes; largura da linha no Postgres
+  102 → 78 bytes; queries por endpoint seguem 1. Testes: shape exato da resposta + invariante
+  "1 consulta por requisição" em `lancamentos.test.ts`/`caixinhas.test.ts`, e `lancamentos-setup.ts`
+  passou a provar isolamento pela contagem SQL e a recusar qualquer campo interno no payload.
+  Build, lint e 219 testes verdes (6 novos); integração real contra a branch `test`
+  (`test:integration:lancamentos` e `test:integration:caixinhas`) passou — 2026-10-13
