@@ -10,6 +10,7 @@ import { NovaCaixinhaModal } from '@/components/nova-caixinha-modal'
 import { Button } from '@/components/ui/button'
 import { mensagemErroApi } from '@/lib/api-client'
 import { useCaixinhas } from '@/state/caixinhas-context'
+import { useLancamentos } from '@/state/lancamentos-context'
 import { Route as rootRoute } from '@/routes/__root'
 import type { Caixinha } from '@/types/caixinha'
 
@@ -21,6 +22,7 @@ export const Route = createRoute({
 
 export function TelaCaixinhas() {
   const { caixinhas, excluirCaixinha, carregando, erro, recarregar } = useCaixinhas()
+  const { recarregar: recarregarLancamentos } = useLancamentos()
   const [novaCaixinhaAberta, setNovaCaixinhaAberta] = useState(false)
   const [movimentando, setMovimentando] = useState<{
     caixinha: Caixinha
@@ -97,6 +99,12 @@ export function TelaCaixinhas() {
         caixinha={movimentando?.caixinha ?? null}
         tipo={movimentando?.tipo ?? 'depositar'}
         onOpenChange={(open) => !open && setMovimentando(null)}
+        onSucesso={(info) => {
+          // O deposito "de_fora" cria uma receita vinculada no backend; o contexto de
+          // caixinhas nao sabe disso, entao recarrega os lancamentos para o saldo do mes
+          // refletir a receita nova sem o usuario precisar navegar.
+          if (info.tipo === 'depositar' && info.origem === 'de_fora') void recarregarLancamentos()
+        }}
       />
       <ExcluirCaixinhaDialog
         caixinha={excluindo}

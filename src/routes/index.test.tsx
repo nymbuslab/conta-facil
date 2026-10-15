@@ -21,7 +21,7 @@ function Harness() {
       </button>
       <button
         onClick={() => {
-          if (caixinhas[0]) depositar(caixinhas[0].id, { valor: '500,00' })
+          if (caixinhas[0]) depositar(caixinhas[0].id, { valor: '500,00', origem: 'saldo_atual' })
         }}
       >
         depositar 500

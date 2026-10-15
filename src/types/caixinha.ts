@@ -21,8 +21,16 @@ export const movimentarCaixinhaSchema = z.object({
   valor: valorSchema,
 })
 
+export const origemDepositoSchema = z.enum(['saldo_atual', 'de_fora'])
+
+export const depositarCaixinhaSchema = movimentarCaixinhaSchema.extend({
+  origem: origemDepositoSchema,
+})
+
 export type CriarCaixinhaFormValues = z.infer<typeof criarCaixinhaSchema>
 export type MovimentarCaixinhaFormValues = z.infer<typeof movimentarCaixinhaSchema>
+export type OrigemDeposito = z.infer<typeof origemDepositoSchema>
+export type DepositarCaixinhaFormValues = z.infer<typeof depositarCaixinhaSchema>
 
 export interface Caixinha {
   id: string

@@ -12,7 +12,12 @@ import {
 import { criarApiClient, mensagemErroApi, type ApiClient } from '@/lib/api-client'
 import { parseValorMonetario } from '@/lib/formatters'
 import { montarUrl } from '@/lib/paginacao'
-import type { Caixinha, CriarCaixinhaFormValues, MovimentarCaixinhaFormValues } from '@/types/caixinha'
+import type {
+  Caixinha,
+  CriarCaixinhaFormValues,
+  DepositarCaixinhaFormValues,
+  MovimentarCaixinhaFormValues,
+} from '@/types/caixinha'
 
 import { useAuth } from './auth-context'
 
@@ -32,7 +37,7 @@ interface CaixinhasContextValue {
   carregarMais: () => Promise<void>
   recarregar: () => Promise<void>
   criarCaixinha: (dados: CriarCaixinhaFormValues) => Promise<void>
-  depositar: (id: string, dados: MovimentarCaixinhaFormValues) => Promise<ResultadoMovimentacao>
+  depositar: (id: string, dados: DepositarCaixinhaFormValues) => Promise<ResultadoMovimentacao>
   resgatar: (id: string, dados: MovimentarCaixinhaFormValues) => Promise<ResultadoMovimentacao>
   excluirCaixinha: (id: string) => Promise<void>
 }
@@ -175,15 +180,15 @@ export function CaixinhasProvider({
 
   async function movimentar(
     id: string,
-    dados: MovimentarCaixinhaFormValues,
+    dados: MovimentarCaixinhaFormValues | DepositarCaixinhaFormValues,
     tipo: 'depositar' | 'resgatar',
   ): Promise<ResultadoMovimentacao> {
     const valor = parseValorMonetario(dados.valor)
     if (valor === null) return { sucesso: false, erro: 'Informe um valor valido' }
     try {
-      const atualizada = await clienteAtual.postIdempotente<CaixinhaApi>(`/caixinhas/${id}/${tipo}`, {
-        valor: Math.round(valor * 100),
-      })
+      const corpo: { valor: number; origem?: string } = { valor: Math.round(valor * 100) }
+      if (tipo === 'depositar' && 'origem' in dados) corpo.origem = dados.origem
+      const atualizada = await clienteAtual.postIdempotente<CaixinhaApi>(`/caixinhas/${id}/${tipo}`, corpo)
       const caixinha = paraCaixinha(atualizada)
       const anterior = caixinhas.find((item) => item.id === id)
       setCaixinhas((atuais) => atuais.map((item) => (item.id === id ? caixinha : item)))
@@ -197,7 +202,7 @@ export function CaixinhasProvider({
     }
   }
 
-  function depositar(id: string, dados: MovimentarCaixinhaFormValues) {
+  function depositar(id: string, dados: DepositarCaixinhaFormValues) {
     return movimentar(id, dados, 'depositar')
   }
 

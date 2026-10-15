@@ -1,8 +1,12 @@
-import { act, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { ApiClient } from '@/lib/api-client'
-import { criarClienteCaixinhasTeste } from '@/test/api-client-mocks'
+import {
+  criarClienteCaixinhasTeste,
+  criarClienteLancamentosTeste,
+  criarEstadoLancamentosTeste,
+} from '@/test/api-client-mocks'
 import { renderWithProviders } from '@/test/test-utils'
 import { useCaixinhas } from '@/state/caixinhas-context'
 
@@ -94,6 +98,65 @@ describe('TelaCaixinhas', () => {
       expect(queryByRole('heading', { name: 'Excluir caixinha?' })).not.toBeInTheDocument()
     })
     expect(getByText('Viagem')).toBeInTheDocument()
+  })
+})
+
+describe('TelaCaixinhas - recarga apos deposito de_fora', () => {
+  async function abrirModalDepositar() {
+    const { getByText, getByRole } = screen
+    act(() => {
+      getByRole('button', { name: 'criar caixinhas' }).click()
+    })
+    await waitFor(() => expect(getByText('Viagem')).toBeInTheDocument())
+    act(() => {
+      getAllDepositarButtons()[0]?.click()
+    })
+  }
+
+  function getAllDepositarButtons() {
+    return screen.getAllByRole('button', { name: 'Depositar' })
+  }
+
+  it('deposito de_fora bem sucedido chama recarregarLancamentos', async () => {
+    const estadoLancamentos = criarEstadoLancamentosTeste([])
+    const clienteCaixinhas = criarClienteCaixinhasTeste([], { lancamentosEstado: estadoLancamentos })
+    const clienteLancamentos = criarClienteLancamentosTeste([], estadoLancamentos)
+    const recarregarEspiao = vi.spyOn(clienteLancamentos, 'get')
+
+    renderWithProviders(<Harness />, { clienteCaixinhas, clienteLancamentos })
+    await abrirModalDepositar()
+
+    fireEvent.change(await screen.findByLabelText('Valor'), { target: { value: '5000' } })
+    fireEvent.click(screen.getByRole('radio', { name: /dinheiro de fora/i }))
+    const chamadasAntes = recarregarEspiao.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+
+    await waitFor(() => {
+      const chamadasResumo = recarregarEspiao.mock.calls
+        .slice(chamadasAntes)
+        .filter(([caminho]) => String(caminho).startsWith('/lancamentos/resumo'))
+      expect(chamadasResumo.length).toBeGreaterThan(0)
+    })
+  })
+
+  it('deposito saldo_atual nao chama recarregarLancamentos', async () => {
+    const estadoLancamentos = criarEstadoLancamentosTeste([])
+    const clienteCaixinhas = criarClienteCaixinhasTeste([], { lancamentosEstado: estadoLancamentos })
+    const clienteLancamentos = criarClienteLancamentosTeste([], estadoLancamentos)
+    const recarregarEspiao = vi.spyOn(clienteLancamentos, 'get')
+
+    renderWithProviders(<Harness />, { clienteCaixinhas, clienteLancamentos })
+    await abrirModalDepositar()
+
+    fireEvent.change(await screen.findByLabelText('Valor'), { target: { value: '5000' } })
+    const chamadasAntes = recarregarEspiao.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    const chamadasResumo = recarregarEspiao.mock.calls
+      .slice(chamadasAntes)
+      .filter(([caminho]) => String(caminho).startsWith('/lancamentos/resumo'))
+    expect(chamadasResumo).toHaveLength(0)
   })
 })
 

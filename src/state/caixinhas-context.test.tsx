@@ -59,10 +59,10 @@ describe('CaixinhasProvider', () => {
     await waitFor(() => expect(result.current.carregando).toBe(false))
 
     await act(async () => result.current.criarCaixinha({ nome: 'Viagem', meta: '6.000,00' }))
-    await act(async () => result.current.depositar('caixinha-1', { valor: '2.400,00' }))
+    await act(async () => result.current.depositar('caixinha-1', { valor: '2.400,00', origem: 'saldo_atual' }))
 
     expect(post).toHaveBeenCalledWith('/caixinhas', { nome: 'Viagem', meta: 600000 })
-    expect(postIdempotente).toHaveBeenCalledWith('/caixinhas/caixinha-1/depositar', { valor: 240000 })
+    expect(postIdempotente).toHaveBeenCalledWith('/caixinhas/caixinha-1/depositar', { valor: 240000, origem: 'saldo_atual' })
     expect(result.current.caixinhas[0].valorGuardado).toBe(2400)
     // O total guardado acompanha o deposito sem precisar recarregar a pagina inteira.
     expect(result.current.totalGuardado).toBe(2400)
