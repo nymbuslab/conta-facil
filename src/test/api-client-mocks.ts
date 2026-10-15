@@ -41,8 +41,23 @@ function lancamentosApiIniciais() {
   }))
 }
 
-export function criarClienteLancamentosTeste(iniciais: Registro[] = lancamentosApiIniciais()): ApiClient {
-  let dados: Registro[] = structuredClone(iniciais)
+/** Estado mutavel compartilhavel entre o mock de lancamentos e o de caixinhas, para o deposito
+ * "de_fora" (origem-deposito-caixinha) conseguir inserir uma receita fake que o mock de
+ * lancamentos enxerga sem os dois clientes se conhecerem. */
+export interface EstadoLancamentosTeste {
+  dados: Registro[]
+}
+
+export function criarEstadoLancamentosTeste(
+  iniciais: Registro[] = lancamentosApiIniciais(),
+): EstadoLancamentosTeste {
+  return { dados: structuredClone(iniciais) }
+}
+
+export function criarClienteLancamentosTeste(
+  iniciais: Registro[] = lancamentosApiIniciais(),
+  estado: EstadoLancamentosTeste = criarEstadoLancamentosTeste(iniciais),
+): ApiClient {
   let sequencia = 0
 
   const criarLancamentos = async (_caminho: string, corpo?: unknown) => {
@@ -63,7 +78,7 @@ export function criarClienteLancamentosTeste(iniciais: Registro[] = lancamentosA
       parcelaAtual: quantidade > 1 ? indice + 1 : null,
       totalParcelas: quantidade > 1 ? quantidade : null,
     }))
-    dados = [...dados, ...criados]
+    estado.dados = [...estado.dados, ...criados]
     return structuredClone(criados)
   }
 
@@ -72,7 +87,7 @@ export function criarClienteLancamentosTeste(iniciais: Registro[] = lancamentosA
     const tipo = query.get('tipo')
     const mes = query.get('mes')
     const busca = (query.get('busca') ?? '').toLowerCase()
-    const filtrados = dados.filter((item) => {
+    const filtrados = estado.dados.filter((item) => {
       if (tipo && item.tipo !== tipo) return false
       if (mes && mesDoItem(item) !== mes) return false
       if (busca && !String(item.descricao).toLowerCase().includes(busca)) return false
@@ -85,7 +100,7 @@ export function criarClienteLancamentosTeste(iniciais: Registro[] = lancamentosA
     const mes = parametros(caminho).get('mes')
     let receitas = 0
     let despesas = 0
-    for (const item of dados) {
+    for (const item of estado.dados) {
       if (mes && mesDoItem(item) !== mes) continue
       if (item.tipo === 'receita') receitas += Number(item.valor)
       else despesas += Number(item.valor)
@@ -104,7 +119,7 @@ export function criarClienteLancamentosTeste(iniciais: Registro[] = lancamentosA
       indice: number
     }>()
 
-    dados.forEach((item, indice) => {
+    estado.dados.forEach((item, indice) => {
       if (item.tipo !== 'despesa' || !item.parcelamentoId) return
       const chave = String(item.parcelamentoId)
       const grupo = grupos.get(chave) ?? {
@@ -142,21 +157,32 @@ export function criarClienteLancamentosTeste(iniciais: Registro[] = lancamentosA
     postIdempotente: criarLancamentos,
     patch: async (caminho: string) => {
       const id = caminho.split('/')[2]
-      dados = dados.map((item) => item.id === id ? { ...item, paga: true } : item)
-      return structuredClone(dados.find((item) => item.id === id))
+      estado.dados = estado.dados.map((item) => item.id === id ? { ...item, paga: true } : item)
+      return structuredClone(estado.dados.find((item) => item.id === id))
     },
     delete: async () => undefined,
   } as unknown as ApiClient
 }
 
-export function criarClienteCaixinhasTeste(iniciais: Registro[] = []): ApiClient {
+export interface OpcoesClienteCaixinhasTeste {
+  /** Estado de lancamentos compartilhado: quando um deposito com origem "de_fora" acontece, uma
+   * receita fake equivalente ao valor depositado entra nesse estado, para o mock de lancamentos
+   * (se estiver usando o mesmo estado) refletir a receita sem os dois clientes se conhecerem. */
+  lancamentosEstado?: EstadoLancamentosTeste
+}
+
+export function criarClienteCaixinhasTeste(
+  iniciais: Registro[] = [],
+  opcoes: OpcoesClienteCaixinhasTeste = {},
+): ApiClient {
   let dados = structuredClone(iniciais)
   let sequencia = 0
+  let sequenciaLancamento = 0
 
   const total = () => dados.reduce((soma, item) => soma + Number(item.valorGuardado ?? 0), 0)
 
   const movimentar = async (caminho: string, corpo?: unknown) => {
-    const entrada = corpo as { valor?: number }
+    const entrada = corpo as { valor?: number; origem?: 'saldo_atual' | 'de_fora' }
     const [, , id, acao] = caminho.split('/')
     const atual = dados.find((item) => item.id === id)
     if (!atual) throw new Error('Caixinha nao encontrada')
@@ -166,6 +192,21 @@ export function criarClienteCaixinhasTeste(iniciais: Registro[] = []): ApiClient
     }
     const atualizada = { ...atual, valorGuardado: Number(atual.valorGuardado) + sinal * Number(entrada.valor) }
     dados = dados.map((item) => item.id === id ? atualizada : item)
+    if (acao === 'depositar' && entrada.origem === 'de_fora' && opcoes.lancamentosEstado) {
+      const hoje = new Date().toISOString().slice(0, 10)
+      opcoes.lancamentosEstado.dados = [...opcoes.lancamentosEstado.dados, {
+        id: `lancamento-de-fora-${++sequenciaLancamento}`,
+        tipo: 'receita',
+        descricao: 'Depósito em caixinha (de fora)',
+        valor: Number(entrada.valor),
+        dataEmissao: hoje,
+        vencimento: null,
+        paga: false,
+        parcelamentoId: null,
+        parcelaAtual: null,
+        totalParcelas: null,
+      }]
+    }
     return structuredClone(atualizada)
   }
 

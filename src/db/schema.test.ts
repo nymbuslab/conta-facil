@@ -1,7 +1,7 @@
 import { getTableConfig } from 'drizzle-orm/pg-core'
 import { describe, expect, it } from 'vitest'
 
-import { caixinhas, idempotencias, lancamentos } from './schema'
+import { caixinhaMovimentacoes, caixinhas, idempotencias, lancamentos } from './schema'
 
 function colunasDa(tabela: typeof lancamentos | typeof caixinhas) {
   return new Map(getTableConfig(tabela).columns.map((coluna) => [coluna.name, coluna]))
@@ -66,5 +66,32 @@ describe('schema financeiro', () => {
 
     expect(colunas.get('meta')?.getSQLType()).toBe('integer')
     expect(colunas.get('valor_guardado')).toMatchObject({ notNull: true, hasDefault: true })
+  })
+})
+
+describe('schema de movimentacoes de caixinha', () => {
+  it('guarda tipo, origem opcional e o lancamento vinculado quando houver', () => {
+    const configuracao = getTableConfig(caixinhaMovimentacoes)
+    const colunas = new Map(configuracao.columns.map((coluna) => [coluna.name, coluna]))
+
+    expect([...colunas.keys()]).toEqual(expect.arrayContaining([
+      'id', 'user_id', 'caixinha_id', 'tipo', 'origem', 'valor', 'lancamento_id', 'criado_em',
+    ]))
+    expect(colunas.get('tipo')).toMatchObject({ notNull: true })
+    expect(colunas.get('origem')).toMatchObject({ notNull: false })
+    expect(colunas.get('lancamento_id')).toMatchObject({ notNull: false })
+    expect(colunas.get('valor')).toMatchObject({ notNull: true })
+    expect(colunas.get('valor')?.getSQLType()).toBe('integer')
+  })
+
+  it('declara os tres checks que amarram origem ao tipo e o lancamento a origem de_fora', () => {
+    const configuracao = getTableConfig(caixinhaMovimentacoes)
+    const nomes = configuracao.checks.map((check) => check.name)
+
+    expect(nomes).toEqual(expect.arrayContaining([
+      'caixinha_movimentacoes_valor_positivo',
+      'caixinha_movimentacoes_origem_por_tipo',
+      'caixinha_movimentacoes_lancamento_so_de_fora',
+    ]))
   })
 })

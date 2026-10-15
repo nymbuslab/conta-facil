@@ -1,0 +1,490 @@
+{
+  "id": "a1579f13-97bc-44aa-81ba-84e16fa1d2e9",
+  "prevId": "7ca1ea67-9a87-4f79-a3d5-310d5dc3f156",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.caixinha_movimentacoes": {
+      "name": "caixinha_movimentacoes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "caixinha_id": {
+          "name": "caixinha_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_movimentacao_caixinha",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origem": {
+          "name": "origem",
+          "type": "origem_movimentacao_caixinha",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "valor": {
+          "name": "valor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lancamento_id": {
+          "name": "lancamento_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "criado_em": {
+          "name": "criado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "caixinha_movimentacoes_caixinha_id_idx": {
+          "name": "caixinha_movimentacoes_caixinha_id_idx",
+          "columns": [
+            {
+              "expression": "caixinha_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "criado_em",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "caixinha_movimentacoes_user_id_idx": {
+          "name": "caixinha_movimentacoes_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "caixinha_movimentacoes_valor_positivo": {
+          "name": "caixinha_movimentacoes_valor_positivo",
+          "value": "\"caixinha_movimentacoes\".\"valor\" > 0"
+        },
+        "caixinha_movimentacoes_origem_por_tipo": {
+          "name": "caixinha_movimentacoes_origem_por_tipo",
+          "value": "(\"caixinha_movimentacoes\".\"tipo\" = 'deposito' AND \"caixinha_movimentacoes\".\"origem\" IS NOT NULL) OR (\"caixinha_movimentacoes\".\"tipo\" = 'resgate' AND \"caixinha_movimentacoes\".\"origem\" IS NULL)"
+        },
+        "caixinha_movimentacoes_lancamento_so_de_fora": {
+          "name": "caixinha_movimentacoes_lancamento_so_de_fora",
+          "value": "\"caixinha_movimentacoes\".\"lancamento_id\" IS NULL OR \"caixinha_movimentacoes\".\"origem\" = 'de_fora'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.caixinhas": {
+      "name": "caixinhas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valor_guardado": {
+          "name": "valor_guardado",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "meta": {
+          "name": "meta",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criado_em": {
+          "name": "criado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "atualizado_em": {
+          "name": "atualizado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "caixinhas_user_id_idx": {
+          "name": "caixinhas_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "caixinhas_user_criado_id_idx": {
+          "name": "caixinhas_user_criado_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "criado_em",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "caixinhas_valor_guardado_nao_negativo": {
+          "name": "caixinhas_valor_guardado_nao_negativo",
+          "value": "\"caixinhas\".\"valor_guardado\" >= 0"
+        },
+        "caixinhas_meta_positiva": {
+          "name": "caixinhas_meta_positiva",
+          "value": "\"caixinhas\".\"meta\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.idempotencias": {
+      "name": "idempotencias",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chave": {
+          "name": "chave",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operacao": {
+          "name": "operacao",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hash_requisicao": {
+          "name": "hash_requisicao",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status_resposta": {
+          "name": "status_resposta",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "corpo_resposta": {
+          "name": "corpo_resposta",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criado_em": {
+          "name": "criado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "idempotencias_user_id_chave_unique": {
+          "name": "idempotencias_user_id_chave_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "chave"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lancamentos": {
+      "name": "lancamentos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_lancamento",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descricao": {
+          "name": "descricao",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valor": {
+          "name": "valor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data_emissao": {
+          "name": "data_emissao",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vencimento": {
+          "name": "vencimento",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paga": {
+          "name": "paga",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "parcelamento_id": {
+          "name": "parcelamento_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parcela_atual": {
+          "name": "parcela_atual",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_parcelas": {
+          "name": "total_parcelas",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "criado_em": {
+          "name": "criado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "atualizado_em": {
+          "name": "atualizado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "lancamentos_user_id_idx": {
+          "name": "lancamentos_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "lancamentos_user_criado_id_idx": {
+          "name": "lancamentos_user_criado_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "criado_em",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "lancamentos_valor_positivo": {
+          "name": "lancamentos_valor_positivo",
+          "value": "\"lancamentos\".\"valor\" > 0"
+        },
+        "lancamentos_campos_por_tipo": {
+          "name": "lancamentos_campos_por_tipo",
+          "value": "(\"lancamentos\".\"tipo\" = 'receita' AND \"lancamentos\".\"data_emissao\" IS NOT NULL AND \"lancamentos\".\"vencimento\" IS NULL) OR (\"lancamentos\".\"tipo\" = 'despesa' AND \"lancamentos\".\"vencimento\" IS NOT NULL AND \"lancamentos\".\"data_emissao\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.origem_movimentacao_caixinha": {
+      "name": "origem_movimentacao_caixinha",
+      "schema": "public",
+      "values": [
+        "saldo_atual",
+        "de_fora"
+      ]
+    },
+    "public.tipo_lancamento": {
+      "name": "tipo_lancamento",
+      "schema": "public",
+      "values": [
+        "receita",
+        "despesa"
+      ]
+    },
+    "public.tipo_movimentacao_caixinha": {
+      "name": "tipo_movimentacao_caixinha",
+      "schema": "public",
+      "values": [
+        "deposito",
+        "resgate"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

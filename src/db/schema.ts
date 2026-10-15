@@ -63,6 +63,36 @@ export const caixinhas = pgTable(
   ],
 )
 
+export const tipoMovimentacaoCaixinha = pgEnum('tipo_movimentacao_caixinha', ['deposito', 'resgate'])
+export const origemMovimentacaoCaixinha = pgEnum('origem_movimentacao_caixinha', ['saldo_atual', 'de_fora'])
+
+export const caixinhaMovimentacoes = pgTable(
+  'caixinha_movimentacoes',
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    caixinhaId: uuid('caixinha_id').notNull(),
+    tipo: tipoMovimentacaoCaixinha().notNull(),
+    origem: origemMovimentacaoCaixinha(),
+    valor: integer().notNull(),
+    lancamentoId: uuid('lancamento_id'),
+    criadoEm: timestamp('criado_em', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (tabela) => [
+    index('caixinha_movimentacoes_caixinha_id_idx').on(tabela.caixinhaId, tabela.criadoEm),
+    index('caixinha_movimentacoes_user_id_idx').on(tabela.userId),
+    check('caixinha_movimentacoes_valor_positivo', sql`${tabela.valor} > 0`),
+    check(
+      'caixinha_movimentacoes_origem_por_tipo',
+      sql`(${tabela.tipo} = 'deposito' AND ${tabela.origem} IS NOT NULL) OR (${tabela.tipo} = 'resgate' AND ${tabela.origem} IS NULL)`,
+    ),
+    check(
+      'caixinha_movimentacoes_lancamento_so_de_fora',
+      sql`${tabela.lancamentoId} IS NULL OR ${tabela.origem} = 'de_fora'`,
+    ),
+  ],
+)
+
 export const idempotencias = pgTable(
   'idempotencias',
   {
@@ -84,4 +114,6 @@ export type LancamentoBanco = typeof lancamentos.$inferSelect
 export type NovoLancamentoBanco = typeof lancamentos.$inferInsert
 export type CaixinhaBanco = typeof caixinhas.$inferSelect
 export type NovaCaixinhaBanco = typeof caixinhas.$inferInsert
+export type CaixinhaMovimentacaoBanco = typeof caixinhaMovimentacoes.$inferSelect
+export type NovaCaixinhaMovimentacaoBanco = typeof caixinhaMovimentacoes.$inferInsert
 export type IdempotenciaBanco = typeof idempotencias.$inferSelect
