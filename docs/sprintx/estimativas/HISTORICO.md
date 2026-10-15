@@ -809,13 +809,178 @@ entradas:
     real: 0.3
     desvio: null
     registrado_em: 2026-10-14
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-01.01
+    tipo_task: persistencia
+    area: schema da tabela caixinha_movimentacoes
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-01.02
+    tipo_task: persistencia
+    area: migration 0003 aplicada na branch test
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.2
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-01.03
+    tipo_task: teste
+    area: mock de deposito com origem
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-01.04
+    tipo_task: teste
+    area: wrapper de teste com dois providers
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-02.01
+    tipo_task: api
+    area: helper criarLancamentoReceita
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-02.02
+    tipo_task: api
+    area: deposito de_fora com chave de idempotencia
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 1.2
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-02.03
+    tipo_task: api
+    area: deposito de_fora sem chave (transacao simples)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.6
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-02.04
+    tipo_task: api
+    area: regressao do deposito saldo_atual
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-02.05
+    tipo_task: api
+    area: resgate com linha de auditoria
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-02.06
+    tipo_task: integracao_externa
+    area: integracao real contra a branch test (depositar de_fora e replay)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.5
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-03.01
+    tipo_task: client
+    area: schema de origem no frontend
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-03.02
+    tipo_task: ui
+    area: campo de origem no modal de deposito
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 1.0
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-03.03
+    tipo_task: client
+    area: contexto encaminha origem
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.5
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-03.04
+    tipo_task: ui
+    area: tela de caixinhas recarrega lancamentos
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.6
+    desvio: null
+    registrado_em: 2026-10-15
+  - trabalho_id: origem-deposito-caixinha
+    task_id: T-03.05
+    tipo_task: teste
+    area: efeito liquido zero no saldo acumulado
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.5
+    desvio: null
+    registrado_em: 2026-10-15
 calibracao:
   - tipo_task: infra
     entradas: 16
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: teste
-    entradas: 9
+    entradas: 12
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: refatoracao
@@ -827,7 +992,7 @@ calibracao:
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: ui
-    entradas: 13
+    entradas: 15
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: documentacao
@@ -835,11 +1000,23 @@ calibracao:
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: integracao_externa
-    entradas: 11
+    entradas: 12
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: config
     entradas: 1
+    desvio_medio: 0
+    fator_ativo: false
+  - tipo_task: persistencia
+    entradas: 2
+    desvio_medio: 0
+    fator_ativo: false
+  - tipo_task: api
+    entradas: 5
+    desvio_medio: 0
+    fator_ativo: false
+  - tipo_task: client
+    entradas: 2
     desvio_medio: 0
     fator_ativo: false
 ---
@@ -960,7 +1137,30 @@ C-02: teste apagando o relatório real do dia) encontrados pelo `auditor-converg
 | rotina-pentest | T-05.01 | refatoracao | achado informativo de indisponibilidade (convergência C-01) | 0,4 h |
 | rotina-pentest | T-05.02 | teste | isolamento do teste de gravação do relatório (convergência C-02) | 0,3 h |
 
-**Total:** 73 tasks, 36,6 h de esforço real registrado.
+## Entradas — origem-deposito-caixinha (rodada única, sem F3.5)
+
+Esta feature não passou pela F3.5 (estimativa) — o usuário não pediu. `estimado_min`/
+`estimado_max`/`estimado_media`/`desvio` ficam em `null`; só o `real` foi registrado.
+
+| Trabalho | Task | Tipo | Área | Real |
+|---|---|---|---|---|
+| origem-deposito-caixinha | T-01.01 | persistencia | schema da tabela caixinha_movimentacoes | 0,3 h |
+| origem-deposito-caixinha | T-01.02 | persistencia | migration 0003 aplicada na branch test | 0,2 h |
+| origem-deposito-caixinha | T-01.03 | teste | mock de depósito com origem | 0,4 h |
+| origem-deposito-caixinha | T-01.04 | teste | wrapper de teste com dois providers | 0,3 h |
+| origem-deposito-caixinha | T-02.01 | api | helper criarLancamentoReceita | 0,3 h |
+| origem-deposito-caixinha | T-02.02 | api | depósito de_fora com chave de idempotência | 1,2 h |
+| origem-deposito-caixinha | T-02.03 | api | depósito de_fora sem chave (transação simples) | 0,6 h |
+| origem-deposito-caixinha | T-02.04 | api | regressão do depósito saldo_atual | 0,3 h |
+| origem-deposito-caixinha | T-02.05 | api | resgate com linha de auditoria | 0,4 h |
+| origem-deposito-caixinha | T-02.06 | integracao_externa | integração real contra a branch test (depositar de_fora e replay) | 0,5 h |
+| origem-deposito-caixinha | T-03.01 | client | schema de origem no frontend | 0,3 h |
+| origem-deposito-caixinha | T-03.02 | ui | campo de origem no modal de depósito | 1,0 h |
+| origem-deposito-caixinha | T-03.03 | client | contexto encaminha origem | 0,5 h |
+| origem-deposito-caixinha | T-03.04 | ui | tela de caixinhas recarrega lançamentos | 0,6 h |
+| origem-deposito-caixinha | T-03.05 | teste | efeito líquido zero no saldo acumulado | 0,5 h |
+
+**Total:** 88 tasks, 44,0 h de esforço real registrado.
 
 ## Calibração por tipo de task
 
@@ -972,12 +1172,15 @@ só para contar quantas tasks de cada tipo já têm `real` registrado. `fator_at
 | Tipo de task | Entradas | Desvio médio | Fator ativo? |
 |---|---|---|---|
 | infra | 16 | não calculável (sem estimativa) | não |
-| teste | 9 | não calculável (sem estimativa) | não |
+| teste | 12 | não calculável (sem estimativa) | não |
 | refatoracao | 3 | não calculável (sem estimativa) | não |
 | dominio | 14 | não calculável (sem estimativa) | não |
-| ui | 13 | não calculável (sem estimativa) | não |
+| persistencia | 2 | não calculável (sem estimativa) | não |
+| api | 5 | não calculável (sem estimativa) | não |
+| client | 2 | não calculável (sem estimativa) | não |
+| ui | 15 | não calculável (sem estimativa) | não |
 | documentacao | 6 | não calculável (sem estimativa) | não |
-| integracao_externa | 11 | não calculável (sem estimativa) | não |
+| integracao_externa | 12 | não calculável (sem estimativa) | não |
 | config | 1 | não calculável (sem estimativa) | não |
 
 ## Como se calcula o desvio
