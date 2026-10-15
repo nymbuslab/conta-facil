@@ -1,10 +1,12 @@
 import { Hono } from 'hono'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { caixinhaMovimentacoes, lancamentos } from '../../db/schema.ts'
 import {
   colunasCaixinhaListada,
   criarRotasCaixinhas,
   paraCaixinhaListada,
+  repositorioPadrao,
   type RepositorioCaixinhas,
 } from './caixinhas'
 import { criarExecutorIdempotencia, type RegistroIdempotencia, type TransacaoIdempotencia } from './idempotencia'
@@ -26,7 +28,8 @@ function criarRepositorio(): RepositorioCaixinhas {
     listar: vi.fn().mockResolvedValue({ itens: [], proximoCursor: null }),
     totalGuardado: vi.fn().mockResolvedValue(1000),
     criar: vi.fn(async () => caixinha()),
-    depositar: vi.fn(async (_userId, _id, valor) => {
+    depositar: vi.fn(async (_userId, id, valor) => {
+      if (id !== CAIXINHA_ID) return null
       valorGuardado += valor
       return caixinha()
     }),
@@ -55,13 +58,25 @@ function criarExecutorMemoria() {
   }, vi.fn())
 }
 
-function criarApp(repositorio: RepositorioCaixinhas, userId = 'usuario-1', executar = criarExecutorMemoria()) {
+/** Simula a transacao simples do deposito de_fora sem Idempotency-Key: so chama o callback com
+ * um "banco" marcador, sem abrir conexao real - suficiente porque quem usa a conexao aqui e o
+ * repositorio injetado (fake), nao o drizzle de verdade. */
+async function transacaoSimplesFake<T>(callback: (banco: unknown) => Promise<T>): Promise<T> {
+  return callback('banco-fake')
+}
+
+function criarApp(
+  repositorio: RepositorioCaixinhas,
+  userId = 'usuario-1',
+  executar = criarExecutorMemoria(),
+  transacionar = transacaoSimplesFake,
+) {
   const app = new Hono<{ Variables: { userId: string } }>()
   app.use('*', async (contexto, next) => {
     contexto.set('userId', userId)
     await next()
   })
-  app.route('/caixinhas', criarRotasCaixinhas(repositorio, executar))
+  app.route('/caixinhas', criarRotasCaixinhas(repositorio, executar, transacionar))
   return app
 }
 
@@ -104,7 +119,63 @@ describe('rotas de caixinhas', () => {
 
     expect(resposta.status).toBe(200)
     expect(await resposta.json()).toMatchObject({ valorGuardado: 1500 })
-    expect(repositorio.depositar).toHaveBeenCalledWith('usuario-1', CAIXINHA_ID, 500)
+    expect(repositorio.depositar).toHaveBeenCalledWith('usuario-1', CAIXINHA_ID, 500, 'saldo_atual')
+  })
+
+  it('propaga origem de_fora ao repositorio quando ha chave de idempotencia', async () => {
+    const chave = '55555555-5555-4555-8555-555555555555'
+    const resposta = await criarApp(repositorio).request(`/caixinhas/${CAIXINHA_ID}/depositar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': chave },
+      body: JSON.stringify({ valor: 500, origem: 'de_fora' }),
+    })
+
+    expect(resposta.status).toBe(200)
+    const chamada = vi.mocked(repositorio.depositar).mock.calls[0]
+    expect(chamada?.slice(0, 4)).toEqual(['usuario-1', CAIXINHA_ID, 500, 'de_fora'])
+  })
+
+  it('deposito de_fora sem chave abre a transacao simples e propaga origem ao repositorio', async () => {
+    let chamouTransacao = false
+    const transacionar = async <T,>(callback: (banco: unknown) => Promise<T>) => {
+      chamouTransacao = true
+      return callback('banco-fake')
+    }
+    const resposta = await criarApp(repositorio, 'usuario-1', criarExecutorMemoria(), transacionar)
+      .request(`/caixinhas/${CAIXINHA_ID}/depositar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valor: 500, origem: 'de_fora' }),
+      })
+
+    expect(resposta.status).toBe(200)
+    expect(chamouTransacao).toBe(true)
+    expect(repositorio.depositar).toHaveBeenCalledWith(
+      'usuario-1', CAIXINHA_ID, 500, 'de_fora', 'banco-fake',
+    )
+  })
+
+  it('deposito de_fora sem chave propaga o erro 404 da transacao simples quando a caixinha nao existe', async () => {
+    const outroId = '66666666-6666-6666-6666-666666666666'
+    const resposta = await criarApp(repositorio).request(`/caixinhas/${outroId}/depositar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valor: 500, origem: 'de_fora' }),
+    })
+
+    expect(resposta.status).toBe(404)
+    expect(await resposta.json()).toEqual({ erro: 'Caixinha não encontrada' })
+  })
+
+  it('deposito sem origem no corpo assume saldo_atual (default do rollout)', async () => {
+    const resposta = await criarApp(repositorio).request(`/caixinhas/${CAIXINHA_ID}/depositar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valor: 500 }),
+    })
+
+    expect(resposta.status).toBe(200)
+    expect(repositorio.depositar).toHaveBeenCalledWith('usuario-1', CAIXINHA_ID, 500, 'saldo_atual')
   })
 
   it('recusa resgate maior que o saldo sem alterar a caixinha', async () => {
@@ -195,6 +266,113 @@ describe('rotas de caixinhas', () => {
     expect((await criarApp(repositorio, 'usuario-1', executar).request(`/caixinhas/${CAIXINHA_ID}/resgatar`, init)).status).toBe(400)
     expect((await criarApp(repositorio, 'usuario-1', executar).request(`/caixinhas/${CAIXINHA_ID}/depositar`, { ...init, body: JSON.stringify({ valor: 1 }) })).status).toBe(200)
     expect((await criarApp(repositorio).request(`/caixinhas/${CAIXINHA_ID}/depositar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: 1 }) })).status).toBe(200)
+  })
+})
+
+/** Banco fake minimo para repositorioPadrao: so precisa suportar update().set().where().returning()
+ * (caixinhas), insert().values() awaitable direto (caixinha_movimentacoes) e
+ * insert().values().returning() (lancamentos, via criarLancamentoReceita). Nao avalia SQL de
+ * verdade - devolve a linha canonica combinada com os valores passados. */
+function criarBancoFakeRepositorio(caixinhaAtual: Record<string, unknown> | undefined) {
+  const inserts: { tabela: unknown; valores: Record<string, unknown> }[] = []
+  let proximoLancamentoId = 0
+
+  const banco = {
+    update(_tabela: unknown) {
+      return {
+        set(valores: Record<string, unknown>) {
+          return {
+            where() {
+              return {
+                async returning() {
+                  if (!caixinhaAtual) return []
+                  return [{ ...caixinhaAtual, atualizadoEm: valores.atualizadoEm }]
+                },
+              }
+            },
+          }
+        },
+      }
+    },
+    insert(tabela: unknown) {
+      return {
+        values(valores: Record<string, unknown>) {
+          inserts.push({ tabela, valores })
+          const resultado = Promise.resolve(undefined) as Promise<undefined> & { returning?: () => Promise<unknown[]> }
+          resultado.returning = async () => [{ id: `lancamento-fake-${++proximoLancamentoId}`, ...valores }]
+          return resultado
+        },
+      }
+    },
+    select() {
+      return { from: () => ({ where: async () => (caixinhaAtual ? [caixinhaAtual] : []) }) }
+    },
+  }
+
+  return { banco, inserts }
+}
+
+describe('repositorioPadrao.depositar grava movimentacao e, quando de_fora, o lancamento vinculado', () => {
+  const caixinhaBase = { id: CAIXINHA_ID, userId: 'usuario-1', nome: 'Reserva', valorGuardado: 1000, meta: 5000 }
+
+  it('origem de_fora cria o lancamento antes e vincula o lancamentoId na movimentacao', async () => {
+    const { banco, inserts } = criarBancoFakeRepositorio(caixinhaBase)
+
+    const resultado = await repositorioPadrao.depositar('usuario-1', CAIXINHA_ID, 500, 'de_fora', banco)
+
+    expect(resultado).toMatchObject({ valorGuardado: 1000 })
+    const insertsLancamentos = inserts.filter((item) => item.tabela === lancamentos)
+    const insertsMovimentacoes = inserts.filter((item) => item.tabela === caixinhaMovimentacoes)
+    expect(insertsLancamentos).toHaveLength(1)
+    expect(insertsLancamentos[0]?.valores).toMatchObject({ tipo: 'receita', valor: 500, userId: 'usuario-1' })
+    expect(insertsMovimentacoes).toHaveLength(1)
+    expect(insertsMovimentacoes[0]?.valores).toMatchObject({
+      tipo: 'deposito', origem: 'de_fora', valor: 500, caixinhaId: CAIXINHA_ID,
+    })
+    expect(insertsMovimentacoes[0]?.valores.lancamentoId).toBe(insertsLancamentos[0]?.valores && 'lancamento-fake-1')
+  })
+
+  it('origem saldo_atual nao cria lancamento nenhum', async () => {
+    const { banco, inserts } = criarBancoFakeRepositorio(caixinhaBase)
+
+    await repositorioPadrao.depositar('usuario-1', CAIXINHA_ID, 500, 'saldo_atual', banco)
+
+    expect(inserts.filter((item) => item.tabela === lancamentos)).toHaveLength(0)
+    const movimentacao = inserts.find((item) => item.tabela === caixinhaMovimentacoes)
+    expect(movimentacao?.valores).toMatchObject({ tipo: 'deposito', origem: 'saldo_atual', lancamentoId: null })
+  })
+
+  it('caixinha inexistente nao grava movimentacao nenhuma', async () => {
+    const { banco, inserts } = criarBancoFakeRepositorio(undefined)
+
+    const resultado = await repositorioPadrao.depositar('usuario-1', CAIXINHA_ID, 500, 'saldo_atual', banco)
+
+    expect(resultado).toBeNull()
+    expect(inserts.filter((item) => item.tabela === caixinhaMovimentacoes)).toHaveLength(0)
+  })
+})
+
+describe('repositorioPadrao.resgatar grava a linha de auditoria com origem nula', () => {
+  it('resgate bem sucedido grava movimentacao tipo resgate sem origem nem lancamento', async () => {
+    const caixinhaBase = { id: CAIXINHA_ID, userId: 'usuario-1', nome: 'Reserva', valorGuardado: 1000, meta: 5000 }
+    const { banco, inserts } = criarBancoFakeRepositorio(caixinhaBase)
+
+    const resultado = await repositorioPadrao.resgatar('usuario-1', CAIXINHA_ID, 200, banco)
+
+    expect(resultado).toMatchObject({ tipo: 'ok' })
+    const movimentacao = inserts.find((item) => item.tabela === caixinhaMovimentacoes)
+    expect(movimentacao?.valores).toMatchObject({
+      tipo: 'resgate', origem: null, valor: 200, lancamentoId: null,
+    })
+  })
+
+  it('resgate que nao atualiza nada nao grava movimentacao', async () => {
+    const { banco, inserts } = criarBancoFakeRepositorio(undefined)
+
+    const resultado = await repositorioPadrao.resgatar('usuario-1', CAIXINHA_ID, 200, banco)
+
+    expect(resultado).toEqual({ tipo: 'nao_encontrada' })
+    expect(inserts.filter((item) => item.tabela === caixinhaMovimentacoes)).toHaveLength(0)
   })
 })
 

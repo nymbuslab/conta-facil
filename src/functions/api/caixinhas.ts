@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import {
+  caixinhaMovimentacoes,
   caixinhas,
   type CaixinhaBanco,
   type NovaCaixinhaBanco,
@@ -18,12 +19,22 @@ import {
 import type { VariaveisAuth } from './auth-middleware.ts'
 import { obterBanco } from './db.ts'
 import { executarComIdempotencia } from './idempotencia.ts'
+import { criarLancamentoReceita } from './lancamentos-shared.ts'
 
 const criarCaixinhaSchema = z.object({
   nome: z.string().trim().min(1),
   meta: z.number().int().positive(),
 })
+const origemSchema = z.enum(['saldo_atual', 'de_fora'])
 const movimentarSchema = z.object({ valor: z.number().int().positive() })
+const depositarSchema = z.object({
+  valor: z.number().int().positive(),
+  origem: origemSchema.optional().default('saldo_atual'),
+})
+
+function hojeISO() {
+  return new Date().toISOString().slice(0, 10)
+}
 const filtrosPaginaSchema = z.object({
   limite: z.coerce.number().int().min(1).max(LIMITE_MAXIMO).optional(),
   cursor: z.string().min(1).optional(),
@@ -66,16 +77,24 @@ export function paraCaixinhaListada(item: CaixinhaListada & { criadoEm: Date }):
   }
 }
 
+export type OrigemDeposito = 'saldo_atual' | 'de_fora'
+
 export type RepositorioCaixinhas = {
   listar: (userId: string, filtros: FiltrosPagina) => Promise<Pagina<CaixinhaListada>>
   totalGuardado: (userId: string) => Promise<number>
   criar: (dados: NovaCaixinhaBanco) => Promise<CaixinhaBanco>
-  depositar: (userId: string, id: string, valor: number, banco?: unknown) => Promise<CaixinhaBanco | null>
+  depositar: (
+    userId: string,
+    id: string,
+    valor: number,
+    origem: OrigemDeposito,
+    banco?: unknown,
+  ) => Promise<CaixinhaBanco | null>
   resgatar: (userId: string, id: string, valor: number, banco?: unknown) => Promise<ResultadoResgate>
   excluir: (userId: string, id: string) => Promise<boolean>
 }
 
-const repositorioPadrao: RepositorioCaixinhas = {
+export const repositorioPadrao: RepositorioCaixinhas = {
   async listar(userId, filtros) {
     const linhas = await obterBanco()
       .select(colunasCaixinhaListada)
@@ -110,8 +129,15 @@ const repositorioPadrao: RepositorioCaixinhas = {
     const [criada] = await obterBanco().insert(caixinhas).values(dados).returning()
     return criada
   },
-  async depositar(userId, id, valor, transacao) {
+  async depositar(userId, id, valor, origem, transacao) {
     const banco = (transacao ?? obterBanco()) as ReturnType<typeof obterBanco>
+
+    let lancamentoId: string | null = null
+    if (origem === 'de_fora') {
+      const lancamento = await criarLancamentoReceita({ userId, valor, dataEmissao: hojeISO() }, banco)
+      lancamentoId = lancamento.id
+    }
+
     const [atualizada] = await banco
       .update(caixinhas)
       .set({
@@ -120,7 +146,18 @@ const repositorioPadrao: RepositorioCaixinhas = {
       })
       .where(and(eq(caixinhas.id, id), eq(caixinhas.userId, userId)))
       .returning()
-    return atualizada ?? null
+    if (!atualizada) return null
+
+    await banco.insert(caixinhaMovimentacoes).values({
+      userId,
+      caixinhaId: id,
+      tipo: 'deposito',
+      origem,
+      valor,
+      lancamentoId,
+    })
+
+    return atualizada
   },
   async resgatar(userId, id, valor, transacao) {
     const banco = (transacao ?? obterBanco()) as ReturnType<typeof obterBanco>
@@ -138,7 +175,17 @@ const repositorioPadrao: RepositorioCaixinhas = {
         ),
       )
       .returning()
-    if (atualizada) return { tipo: 'ok', caixinha: atualizada }
+    if (atualizada) {
+      await banco.insert(caixinhaMovimentacoes).values({
+        userId,
+        caixinhaId: id,
+        tipo: 'resgate',
+        origem: null,
+        valor,
+        lancamentoId: null,
+      })
+      return { tipo: 'ok', caixinha: atualizada }
+    }
 
     const [existente] = await banco
       .select()
@@ -176,9 +223,16 @@ class RespostaMovimentacaoError extends Error {
   }
 }
 
+/** Transacao simples (sem idempotencia) para compor mais de uma escrita atomicamente - usada
+ * pelo deposito origem de_fora sem Idempotency-Key, que grava caixinha_movimentacoes e
+ * lancamentos juntos. Injetavel para teste; em producao abre uma transacao real no Postgres. */
+type TransacaoSimples = <T>(callback: (banco: unknown) => Promise<T>) => Promise<T>
+const transacaoSimplesPadrao: TransacaoSimples = (callback) => obterBanco().transaction(callback)
+
 export function criarRotasCaixinhas(
   repositorio: RepositorioCaixinhas = repositorioPadrao,
   executarIdempotencia = executarComIdempotencia,
+  transacionar: TransacaoSimples = transacaoSimplesPadrao,
 ) {
   const app = new Hono<{ Variables: VariaveisAuth }>()
 
@@ -226,12 +280,31 @@ export function criarRotasCaixinhas(
     const corpo = await lerCorpoJson(contexto)
     if (!corpo.sucesso) return contexto.json({ erro: 'Valor inválido' }, 400)
 
-    const resultado = movimentarSchema.safeParse(corpo.dados)
+    const resultado = depositarSchema.safeParse(corpo.dados)
     if (!resultado.success) return contexto.json({ erro: 'Valor inválido' }, 400)
 
     const chave = contexto.req.header('Idempotency-Key')
     if (!chave) {
-      const atualizada = await repositorio.depositar(contexto.get('userId'), id.data, resultado.data.valor)
+      // origem de_fora grava duas tabelas (caixinha_movimentacoes e, quando aplicavel,
+      // lancamentos) - mesmo sem chave de idempotencia, as duas escritas precisam ser atomicas.
+      if (resultado.data.origem === 'de_fora') {
+        try {
+          const atualizada = await transacionar(async (transacao) => {
+            const linha = await repositorio.depositar(
+              contexto.get('userId'), id.data, resultado.data.valor, resultado.data.origem, transacao,
+            )
+            if (!linha) throw new RespostaMovimentacaoError(404, { erro: 'Caixinha não encontrada' })
+            return linha
+          })
+          return contexto.json(atualizada)
+        } catch (erro) {
+          if (erro instanceof RespostaMovimentacaoError) return contexto.json(erro.corpo, erro.status)
+          throw erro
+        }
+      }
+      const atualizada = await repositorio.depositar(
+        contexto.get('userId'), id.data, resultado.data.valor, resultado.data.origem,
+      )
       if (!atualizada) return contexto.json({ erro: 'Caixinha não encontrada' }, 404)
       return contexto.json(atualizada)
     }
@@ -242,7 +315,9 @@ export function criarRotasCaixinhas(
         userId: contexto.get('userId'), chave: chaveValida.data,
         operacao: 'caixinhas.depositar', payload: { id: id.data, ...resultado.data },
       }, async (banco) => {
-        const atualizada = await repositorio.depositar(contexto.get('userId'), id.data, resultado.data.valor, banco)
+        const atualizada = await repositorio.depositar(
+          contexto.get('userId'), id.data, resultado.data.valor, resultado.data.origem, banco,
+        )
         if (!atualizada) throw new RespostaMovimentacaoError(404, { erro: 'Caixinha não encontrada' })
         return { status: 200, corpo: atualizada }
       })

@@ -127,7 +127,69 @@ try {
   }
 
   console.log('Caixinhas reais provaram replay concorrente, rollback e isolamento por usuario')
+
+  // origem-deposito-caixinha: deposito "de_fora" real cria lancamento de receita e movimentacao
+  // vinculados, e o replay da chave nao duplica nenhum dos dois.
+  const movimentarComOrigem = (
+    token: string,
+    id: string,
+    valor: number,
+    origem: 'saldo_atual' | 'de_fora',
+    chave: string,
+  ) => app.request(`/caixinhas/${id}/depositar`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': chave,
+    },
+    body: JSON.stringify({ valor, origem }),
+  })
+
+  const chaveDeFora = crypto.randomUUID()
+  const [depositoDeFora, replayDeFora] = await Promise.all([
+    movimentarComOrigem(usuarioA.token, caixinha.id, 70000, 'de_fora', chaveDeFora),
+    movimentarComOrigem(usuarioA.token, caixinha.id, 70000, 'de_fora', chaveDeFora),
+  ])
+  if (depositoDeFora.status !== 200 || replayDeFora.status !== 200) {
+    throw new Error('Deposito de_fora ou seu replay nao retornaram 200')
+  }
+  const [aposDeFora, aposReplayDeFora] = await Promise.all([
+    depositoDeFora.json() as Promise<{ valorGuardado?: number }>,
+    replayDeFora.json() as Promise<{ valorGuardado?: number }>,
+  ])
+  if (aposDeFora.valorGuardado !== 90000 || aposReplayDeFora.valorGuardado !== 90000) {
+    throw new Error('Deposito de_fora nao somou 70000 ao valorGuardado de forma idempotente')
+  }
+
+  const lancamentosReceita = await pool.query<{ valor: number; tipo: string }>(
+    'select valor, tipo from lancamentos where user_id = $1 and descricao = $2',
+    [usuarioA.id, 'Depósito em caixinha'],
+  )
+  if (lancamentosReceita.rowCount !== 1
+    || lancamentosReceita.rows[0]?.tipo !== 'receita'
+    || lancamentosReceita.rows[0]?.valor !== 70000) {
+    throw new Error('Replay do deposito de_fora duplicou ou nao criou o lancamento de receita vinculado')
+  }
+
+  const movimentacoesDeFora = await pool.query<{ tipo: string; origem: string | null; lancamento_id: string | null }>(
+    'select tipo, origem, lancamento_id from caixinha_movimentacoes where caixinha_id = $1 and origem = $2',
+    [caixinha.id, 'de_fora'],
+  )
+  if (movimentacoesDeFora.rowCount !== 1
+    || movimentacoesDeFora.rows[0]?.tipo !== 'deposito'
+    || !movimentacoesDeFora.rows[0]?.lancamento_id) {
+    throw new Error('Replay do deposito de_fora duplicou ou nao vinculou a movimentacao ao lancamento')
+  }
+
+  console.log('Caixinhas reais provaram deposito de_fora com lancamento vinculado e replay sem duplicacao')
 } finally {
+  await pool.query('delete from caixinha_movimentacoes where user_id = any($1::uuid[])', [
+    [usuarioA.id, usuarioB.id],
+  ])
+  await pool.query('delete from lancamentos where user_id = any($1::uuid[])', [
+    [usuarioA.id, usuarioB.id],
+  ])
   await pool.query('delete from idempotencias where user_id = any($1::uuid[])', [
     [usuarioA.id, usuarioB.id],
   ])
