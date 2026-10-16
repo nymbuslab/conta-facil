@@ -38,7 +38,7 @@ src/
   routes/          uma rota por tela: index (Início), caixinhas, parcelas, perfil, __root
   components/       componentes de tela + ui/ (primitivas tipo shadcn)
   state/            auth e contextos remotos de lançamentos e caixinhas
-  db/               schema Drizzle de lançamentos, caixinhas e idempotências
+  db/               schema Drizzle de lançamentos, caixinhas (e suas movimentações) e idempotências
   functions/api/    API Hono autenticada por JWT
   hooks/            use-saldo-acumulado (saldo do mês + caixinhas)
   lib/              cliente HTTP autenticado, formatters e utilitários de data
@@ -160,6 +160,18 @@ corrido, não entra no filtro de mês.
   `FUNCTION_ALLOWED_ORIGINS`. Faltou nesse passo no rollout de `production`
   (`docs/sprintx/features/rollout-neon-production/00-BLOQUEIOS.md`, B-05) e só apareceu ao testar
   o golden path real.
+- **Origem do depósito na caixinha**: ao depositar, o usuário escolhe a origem do dinheiro —
+  `saldo_atual` (transferência interna, desconta do saldo do mês, comportamento de sempre) ou
+  `de_fora` (dinheiro novo entrando; não desconta e gera um lançamento de receita vinculado na
+  mesma transação). Tabela `caixinha_movimentacoes` (`origem`, `tipo`, `lancamentoId`) registra
+  cada depósito/resgate; resgate sempre soma de volta ao saldo, independente da origem do
+  depósito original — matemática simétrica: o depósito `de_fora` tem efeito líquido zero no
+  saldo no momento em que acontece, porque a receita e o total guardado sobem juntos. `origem` é
+  opcional no backend com default `saldo_atual` por um ciclo de rollout, mesmo padrão já usado
+  para `Idempotency-Key`. Migration `drizzle/0003_caixinha_movimentacoes.sql`, aplicada em
+  `production` em 2026-10-16 — ver "Risco conhecido" em `DEPLOY.md` sobre o `drizzle-kit migrate`
+  nessa branch. Decisões e histórico em
+  `docs/sprintx/features/origem-deposito-caixinha/`.
 
 ## Env vars
 
@@ -244,6 +256,6 @@ neon-object-storage, etc.) — consultar antes de mexer em schema, auth ou stora
 
 ## Design
 
-Stitch `designSystem`: `assets/4d36820163ae41f2a29bf0522f55bb24` (Caderneta Financeira
-Digital), no projeto `12211428364777233980`. Reusar em toda tela nova. Os tokens reais de
-`src/index.css` prevalecem: cores HSL, azul primário sólido e `--radius: 0.25rem`.
+Stitch `designSystem`: `assets/4836740709574892088` (Conta Fácil), no projeto
+`3883790966281062616`. Reusar em toda tela nova. Os tokens reais de `src/index.css` prevalecem:
+cores HSL, azul primário sólido e `--radius: 0.25rem`.

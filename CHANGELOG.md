@@ -2,6 +2,12 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-16 — Origem do depósito na caixinha
+
+- Ao depositar numa caixinha, agora dá pra escolher se o dinheiro veio do saldo que você já
+  tinha no app ou se é dinheiro novo (de outro banco, por exemplo). No segundo caso, ele não é
+  descontado do seu saldo do mês — em vez disso, vira uma entrada registrada automaticamente.
+
 ## 2026-10-14 — Reforço de segurança e rotina de verificação automática
 
 - O app passa a rodar uma checagem de segurança própria toda semana, sem precisar de ninguém

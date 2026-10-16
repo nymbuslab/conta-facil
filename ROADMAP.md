@@ -18,6 +18,9 @@ As listas (Início e Caixinhas) são paginadas por cursor com filtro de mês e b
 tela Início permite navegar entre os meses; os totais e os parcelamentos vêm de endpoints
 agregados.
 
+Depósitos em caixinha têm origem rastreada desde 2026-10-16 (saldo atual ou dinheiro de fora),
+com lançamento de receita vinculado quando o dinheiro é de fora.
+
 ## Prioridades
 
 _(nada no momento)_

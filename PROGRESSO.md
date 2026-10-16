@@ -219,3 +219,10 @@ _(nada no momento)_
   página de login carrega, fontes do Google Fonts carregam e o fetch de login chega ao Neon
   Auth sem bloqueio de CSP (401 da credencial falsa de teste, não da CSP). Build, lint e 319
   testes verdes (4 novos) — 2026-10-14
+- [x] Origem do depósito na caixinha: ao depositar, o usuário escolhe se o valor veio do saldo
+  atual (desconta do saldo do mês, como sempre) ou é dinheiro de fora (não desconta e gera um
+  lançamento de receita vinculado automaticamente, com efeito líquido zero no saldo no momento
+  do depósito); resgate sempre soma de volta ao saldo, independente da origem. Tabela nova
+  `caixinha_movimentacoes` registra cada depósito/resgate. Build, lint e 344 testes verdes (25
+  novos). Implantado em `production`: migration aplicada e Function publicada, health check OK
+  — 2026-10-16 (UI não validada visualmente: exige login via Neon Auth)
