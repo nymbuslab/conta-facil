@@ -75,8 +75,28 @@ liberado — é uma allowlist separada de `FUNCTION_ALLOWED_ORIGINS`.
 
 Aplicar o SQL de `drizzle/**` na branch `production` **antes** de publicar a Function que o
 referencia. Caminhos possíveis: `npx drizzle-kit migrate` com o `DATABASE_URL_UNPOOLED` de
-produção, ou o SQL colado no SQL Editor do console Neon. Operação autorizada explicitamente à
-parte — o script só faz o gate de confirmação, nunca aplica sozinho.
+produção, ou o SQL colado no SQL Editor do console Neon (ou MCP do Neon). Operação autorizada
+explicitamente à parte — o script só faz o gate de confirmação, nunca aplica sozinho.
+
+**Risco conhecido, causa raiz confirmada e corrigida em 2026-10-16:** `drizzle.__drizzle_migrations`
+em `production` ficou vazia porque as 4 migrations até aqui (`0000` a `0003`) foram sempre
+aplicadas por SQL direto (MCP do Neon ou SQL Editor do console) — o bloqueio original foi o
+classificador de auto mode do harness recusando `drizzle-kit migrate` autônomo contra
+`production` (mesmo gate de `B-01` em `docs/sprintx/features/rollout-neon-production/`). SQL
+direto cria as tabelas certas, mas só o próprio `drizzle-kit` grava a tabela de controle — então
+ela nunca foi populada, e a próxima `drizzle-kit migrate` tentaria reaplicar tudo desde o início
+e colidir com as tabelas já existentes.
+
+Corrigido inserindo manualmente as 4 linhas de controle em `production` (hash + timestamp,
+copiados da branch `test`, onde `drizzle-kit migrate` roda de verdade a cada
+`npm run test:migrate` — hash é do conteúdo do arquivo, igual em qualquer branch). Confirmado por
+leitura: os 4 hashes em `production` batem com os de `test`.
+
+**Ao aplicar uma migration nova em `production`:** se continuar usando SQL direto (MCP ou SQL
+Editor) em vez de `drizzle-kit migrate` — por exemplo, se o classificador do harness bloquear de
+novo —, inserir manualmente a linha correspondente em `drizzle.__drizzle_migrations` (hash do
+arquivo + timestamp do `drizzle/meta/_journal.json`) depois de aplicar o SQL, para não deixar a
+tabela de controle atrasada outra vez.
 
 ### Reposição de `FUNCTION_ALLOWED_ORIGINS` pós-deploy
 

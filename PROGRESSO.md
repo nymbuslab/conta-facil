@@ -226,3 +226,21 @@ _(nada no momento)_
   `caixinha_movimentacoes` registra cada depósito/resgate. Build, lint e 344 testes verdes (25
   novos). Implantado em `production`: migration aplicada e Function publicada, health check OK
   — 2026-10-16 (UI não validada visualmente: exige login via Neon Auth)
+- [x] Causa raiz do `drizzle.__drizzle_migrations` vazio em `production`: as 4 migrations
+  aplicadas até aqui sempre foram por SQL direto (MCP do Neon ou SQL Editor), nunca por
+  `drizzle-kit migrate` — só o próprio `drizzle-kit` grava a tabela de controle, então ela nunca
+  foi populada, mesmo com as tabelas certas no lugar. Corrigido inserindo as 4 linhas de controle
+  em `production` (hash + timestamp iguais aos já provados em `test`, onde `drizzle-kit migrate`
+  roda de verdade a cada `npm run test:migrate`). Confirmado por leitura: hashes de `production`
+  batem com os de `test`. Ver `DEPLOY.md` para o procedimento caso aconteça de novo — 2026-10-16
+- [x] Validação visual do campo de origem no modal de depósito (desktop 1280px e mobile 375px),
+  logado de verdade com a conta de teste do pentest na branch `test`: os dois estados do
+  `radiogroup` ("Saldo atual" / "Dinheiro de fora") alternam corretamente, o modal respeita a
+  margem lateral no mobile e o fluxo completo foi exercitado de ponta a ponta — depósito
+  "Dinheiro de fora" gerou a receita vinculada "Depósito em caixinha" e manteve a sobra prevista
+  em R$ 0,00 (efeito líquido zero), confirmando o comportamento documentado. Achado à parte: a
+  Function publicada em `test` estava parada em 2026-10-10 (antes da idempotência, paginação e da
+  própria feature de origem), causando 404 em `/lancamentos/resumo` — corrigida com
+  `npx neon deploy --branch test`, sem tocar em `production`. `FUNCTION_ALLOWED_ORIGINS` do
+  `test` ganhou `http://localhost:5173` em `.env.test.local` para permitir esse tipo de validação
+  local no futuro — 2026-10-16
