@@ -111,3 +111,9 @@ aborta no passo 3.
   O health check prova que a Function responde, não que a instância nova já está no ar.
 - O deploy da Function não é disparado por `git push`; sempre que mudar código da Function,
   rode `npm run deploy` (ou o `npx neon deploy --env <arquivo>` manual).
+- `npm run deploy` só cobre `production`. A Function da branch `test` **não** é redeployada por
+  nenhum script e fica parada até alguém rodar `npx neon deploy --branch test --env
+  .env.test.local` manualmente — achado em 2026-10-16, quando a Function de `test` estava parada
+  desde 2026-10-10 (antes de idempotência, paginação e da feature de origem do depósito) e uma
+  validação visual local quebrou com 404 em rotas que só existiam em `production`. Antes de
+  validar algo manualmente contra `test`, considerar redeployar a Function primeiro.

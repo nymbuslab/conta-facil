@@ -169,8 +169,8 @@ corrido, não entra no filtro de mês.
   saldo no momento em que acontece, porque a receita e o total guardado sobem juntos. `origem` é
   opcional no backend com default `saldo_atual` por um ciclo de rollout, mesmo padrão já usado
   para `Idempotency-Key`. Migration `drizzle/0003_caixinha_movimentacoes.sql`, aplicada em
-  `production` em 2026-10-16 — ver "Risco conhecido" em `DEPLOY.md` sobre o `drizzle-kit migrate`
-  nessa branch. Decisões e histórico em
+  `production` em 2026-10-16 — ver causa raiz e correção em `DEPLOY.md` sobre o `drizzle-kit
+  migrate` nessa branch. Decisões e histórico em
   `docs/sprintx/features/origem-deposito-caixinha/`.
 
 ## Env vars
