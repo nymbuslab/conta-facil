@@ -33,7 +33,21 @@ Neon Auth, fazendo o `Set-Cookie` nascer no mesmo domínio do app.
   login na hora, porque o client passaria a chamar `/auth/*` no próprio domínio antes de existir
   configuração nenhuma apontando para o upstream.
 - Mudar env var no painel **não** dispara um novo build sozinho — depois de configurar, é preciso
-  um novo `git push` (ou retry manual do deploy) para o valor novo entrar no bundle.
+  um novo `git push` (ou retry manual do deploy) para o valor novo entrar no bundle. Isso vale
+  tanto para env var de build (`VITE_*`) quanto para env var de Functions
+  (`NEON_AUTH_UPSTREAM_URL`) — as duas ficam "congeladas" por deployment.
+- **`NEON_AUTH_UPSTREAM_URL` precisa incluir o path, não só o host** — o valor correto é igual ao
+  `NEON_AUTH_BASE_URL` de `.env.local`/`.env.test.local`, que já traz `/neondb/auth` no final
+  (ex. `https://ep-shiny-snow-b4twxw1g.neonauth.c-6.us-east-2.aws.neon.tech/neondb/auth`). Só o
+  host, sem esse path, faz toda rota do Better Auth devolver 404 através do proxy (achado real na
+  validação de Preview em 2026-10-17).
+- **Domínio confiável por branch de Preview**: a allowlist do Neon Auth (`add_auth_trusted_domain`)
+  valida pelo header `Origin` da requisição — confirmado na validação de Preview (POST
+  `/sign-in/email` devolvia `403 INVALID_ORIGIN` até o domínio de preview ser registrado na
+  branch `test`). Produção não deveria precisar de nada novo aqui, porque a origem que o Neon Auth
+  vê continua sendo `contafacil.nymbuslab.com.br`, já confiável hoje — mas qualquer branch de
+  Preview nova usada para validar login precisa do seu domínio (`<nome-da-branch>.conta-facil.pages.dev`,
+  veja o alias em `aliases` na resposta da API de deployments) registrado antes de testar.
 
 Esquecer o segundo passo não gera erro visível: o frontend novo roda contra a Function antiga,
 respondendo "normal" com comportamento desatualizado. Foi o incidente que motivou o script abaixo.
