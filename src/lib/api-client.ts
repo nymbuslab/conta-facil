@@ -88,7 +88,7 @@ export function criarApiClient({
   }
 
   return {
-    get: <T>(caminho: string) => requisitar<T>(caminho),
+    get: <T>(caminho: string) => requisitar<T>(caminho, {}, true),
     post: <T>(caminho: string, corpo?: unknown) =>
       requisitar<T>(caminho, {
         method: 'POST',
