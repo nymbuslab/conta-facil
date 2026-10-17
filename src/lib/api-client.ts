@@ -107,7 +107,15 @@ export function criarApiClient({
         method: 'PATCH',
         body: corpo === undefined ? undefined : JSON.stringify(corpo),
       }),
+    patchIdempotente: <T>(caminho: string, corpo?: unknown) =>
+      requisitar<T>(caminho, {
+        method: 'PATCH',
+        headers: { 'Idempotency-Key': gerarChave() },
+        body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      }, true),
     delete: <T = void>(caminho: string) => requisitar<T>(caminho, { method: 'DELETE' }),
+    deleteIdempotente: <T = void>(caminho: string) =>
+      requisitar<T>(caminho, { method: 'DELETE', headers: { 'Idempotency-Key': gerarChave() } }, true),
   }
 }
 

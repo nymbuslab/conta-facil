@@ -1,4 +1,4 @@
-import type { ApiClient } from '@/lib/api-client'
+import { ApiError, type ApiClient } from '@/lib/api-client'
 import { adicionarMeses } from '@/lib/datas'
 import { lancamentosIniciais } from '@/lib/mock-data'
 import { LIMITE_PADRAO } from '@/lib/paginacao'
@@ -35,6 +35,7 @@ function lancamentosApiIniciais() {
     dataEmissao: item.tipo === 'receita' ? item.dataEmissao : null,
     vencimento: item.tipo === 'despesa' ? item.vencimento : null,
     paga: item.tipo === 'despesa' ? item.paga : false,
+    pagoEm: item.tipo === 'despesa' ? (item.pagoEm ?? null) : null,
     parcelamentoId: item.tipo === 'despesa' ? item.parcelamentoId : null,
     parcelaAtual: item.tipo === 'despesa' ? item.parcelaAtual : null,
     totalParcelas: item.tipo === 'despesa' ? item.totalParcelas : null,
@@ -74,6 +75,7 @@ export function criarClienteLancamentosTeste(
       dataEmissao: entrada.dataEmissao ?? null,
       vencimento: entrada.vencimento ? adicionarMeses(String(entrada.vencimento), indice) : null,
       paga: false,
+      pagoEm: null,
       parcelamentoId,
       parcelaAtual: quantidade > 1 ? indice + 1 : null,
       totalParcelas: quantidade > 1 ? quantidade : null,
@@ -100,12 +102,17 @@ export function criarClienteLancamentosTeste(
     const mes = parametros(caminho).get('mes')
     let receitas = 0
     let despesas = 0
+    let despesasPagas = 0
     for (const item of estado.dados) {
       if (mes && mesDoItem(item) !== mes) continue
-      if (item.tipo === 'receita') receitas += Number(item.valor)
-      else despesas += Number(item.valor)
+      if (item.tipo === 'receita') {
+        receitas += Number(item.valor)
+      } else {
+        despesas += Number(item.valor)
+        if (item.paga) despesasPagas += Number(item.valor)
+      }
     }
-    return { receitas, despesas }
+    return { receitas, despesas, despesasPagas }
   }
 
   const listarParcelamentos = (caminho: string) => {
@@ -186,10 +193,81 @@ export function criarClienteLancamentosTeste(
     postIdempotente: criarLancamentos,
     patch: async (caminho: string) => {
       const id = caminho.split('/')[2]
-      estado.dados = estado.dados.map((item) => item.id === id ? { ...item, paga: true } : item)
-      return structuredClone(estado.dados.find((item) => item.id === id))
+
+      if (caminho.endsWith('/pagar')) {
+        const hoje = new Date().toISOString().slice(0, 10)
+        estado.dados = estado.dados.map((item) =>
+          item.id === id ? { ...item, paga: true, pagoEm: hoje } : item,
+        )
+        return structuredClone(estado.dados.find((item) => item.id === id))
+      }
+
+      return estado.dados
+    },
+    patchIdempotente: async (caminho: string, corpo?: unknown) => {
+      const id = caminho.split('/')[2]
+      const atual = estado.dados.find((item) => item.id === id)
+      if (!atual) throw new ApiError(404, 'Lançamento não encontrado')
+      if (atual.vinculoCaixinha) {
+        throw new ApiError(409, 'Lançamento vinculado a um depósito em caixinha — edite ou exclua por lá')
+      }
+
+      const entrada = corpo as Registro
+      const alcance = entrada.alcance === 'futuras' ? 'futuras' : 'somente'
+      const ehAfetada = (item: Registro) =>
+        alcance === 'somente' || !atual.parcelamentoId
+          ? item.id === id
+          : item.parcelamentoId === atual.parcelamentoId &&
+            Number(item.parcelaAtual) >= Number(atual.parcelaAtual) &&
+            !item.paga
+
+      estado.dados = estado.dados.map((item) =>
+        ehAfetada(item)
+          ? {
+              ...item,
+              descricao: entrada.descricao,
+              valor: entrada.valor,
+              dataEmissao: entrada.dataEmissao ?? item.dataEmissao,
+              vencimento: entrada.vencimento ?? item.vencimento,
+            }
+          : item,
+      )
+
+      return structuredClone(estado.dados.filter(ehAfetada))
     },
     delete: async () => undefined,
+    deleteIdempotente: async (caminho: string) => {
+      const [semQuery, query] = caminho.split('?')
+      const id = semQuery.split('/')[2]
+      const alcance = new URLSearchParams(query).get('alcance') === 'futuras' ? 'futuras' : 'somente'
+      const atual = estado.dados.find((item) => item.id === id)
+      if (!atual) throw new ApiError(404, 'Lançamento não encontrado')
+      if (atual.vinculoCaixinha) {
+        throw new ApiError(409, 'Lançamento vinculado a um depósito em caixinha — edite ou exclua por lá')
+      }
+
+      const idsExcluidos =
+        alcance === 'futuras' && atual.parcelamentoId
+          ? estado.dados
+              .filter((item) =>
+                item.parcelamentoId === atual.parcelamentoId &&
+                Number(item.parcelaAtual) >= Number(atual.parcelaAtual) &&
+                !item.paga,
+              )
+              .map((item) => String(item.id))
+          : [id]
+
+      estado.dados = estado.dados.filter((item) => !idsExcluidos.includes(String(item.id)))
+
+      if (atual.parcelamentoId) {
+        const restantes = estado.dados.filter((item) => item.parcelamentoId === atual.parcelamentoId)
+        estado.dados = estado.dados.map((item) =>
+          item.parcelamentoId === atual.parcelamentoId ? { ...item, totalParcelas: restantes.length } : item,
+        )
+      }
+
+      return { idsExcluidos }
+    },
   } as unknown as ApiClient
 }
 
@@ -231,9 +309,11 @@ export function criarClienteCaixinhasTeste(
         dataEmissao: hoje,
         vencimento: null,
         paga: false,
+        pagoEm: null,
         parcelamentoId: null,
         parcelaAtual: null,
         totalParcelas: null,
+        vinculoCaixinha: true,
       }]
     }
     return structuredClone(atualizada)

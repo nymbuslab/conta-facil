@@ -132,7 +132,7 @@ try {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(corpoJson),
     })
-    return (await resposta.json()) as Array<{ id: string }>
+    return (await resposta.json()) as Array<{ id: string; parcelamentoId: string | null }>
   }
 
   const [[despesaProximaA], [despesaPagaA], [despesaProximaB]] = await Promise.all([
@@ -189,6 +189,114 @@ try {
   }
 
   console.log('Vencendo e recentes provaram janela de dias, exclusao de pagas, mistura de tipo e isolamento por usuario')
+
+  // --- PATCH e DELETE /lancamentos/:id (editar-excluir-lancamentos) ---
+  const editar = (token: string, id: string, chave: string, corpoJson: Record<string, unknown>) =>
+    app.request(`/lancamentos/${id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Idempotency-Key': chave },
+      body: JSON.stringify(corpoJson),
+    })
+  const excluir = (token: string, id: string, chave: string, alcance?: 'futuras') =>
+    app.request(`/lancamentos/${id}${alcance ? `?alcance=${alcance}` : ''}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}`, 'Idempotency-Key': chave },
+    })
+
+  // Parcelamento de 4, nenhuma paga: edita a 3a com alcance 'futuras' e prova que o filtro e
+  // por INDICE da parcela (>= atual), nao por status de pago — as duas anteriores (1 e 2, nao
+  // pagas) ficam de fora mesmo sendo igualmente nao pagas (achado da auditoria F5, T-02.03).
+  const parcelasEdicao = await criarSemIdempotencia(usuarioA.token, {
+    tipo: 'despesa', descricao: 'Parcelamento edicao', valor: 100, vencimento: emDias(5),
+    parcelado: true, quantidadeParcelas: 4,
+  })
+  if (parcelasEdicao.length !== 4) throw new Error('Fixture de parcelamento para editar nao criou 4 parcelas')
+  const respostaEdicao = await editar(
+    usuarioA.token, parcelasEdicao[2].id,
+    '10101010-1010-4101-8101-101010101010',
+    { tipo: 'despesa', descricao: 'Parcelamento editado', valor: 150, vencimento: emDias(5), alcance: 'futuras' },
+  )
+  if (respostaEdicao.status !== 200) throw new Error(`PATCH com alcance futuras retornou ${respostaEdicao.status}`)
+  const linhasPosEdicao = await pool.query<{ id: string; descricao: string; valor: number }>(
+    'select id, descricao, valor from lancamentos where parcelamento_id = $1 order by parcela_atual',
+    [parcelasEdicao[0].parcelamentoId ?? parcelasEdicao[0].id],
+  )
+  const [p1, p2, p3, p4] = linhasPosEdicao.rows
+  if (p1.descricao !== 'Parcelamento edicao' || p2.descricao !== 'Parcelamento edicao') {
+    throw new Error('Editar com alcance futuras alterou parcela anterior a atual')
+  }
+  if (p3.descricao !== 'Parcelamento editado' || p4.descricao !== 'Parcelamento editado') {
+    throw new Error('Editar com alcance futuras nao propagou para a atual e as seguintes')
+  }
+  if (Number(p3.valor) !== 150 || Number(p4.valor) !== 150) {
+    throw new Error('Editar com alcance futuras nao propagou o valor novo')
+  }
+  console.log('PATCH com alcance futuras provou filtro por indice de parcela, nao por status de pago')
+
+  // Exclui a parcela do MEIO (nao a ultima) de um grupo de 3, com alcance 'somente' — prova que
+  // totalParcelas e corrigido mesmo quando a excluida nao e a ultima do grupo (achado da
+  // auditoria F5, T-02.05).
+  const parcelasExclusao = await criarSemIdempotencia(usuarioA.token, {
+    tipo: 'despesa', descricao: 'Parcelamento exclusao', valor: 200, vencimento: emDias(6),
+    parcelado: true, quantidadeParcelas: 3,
+  })
+  if (parcelasExclusao.length !== 3) throw new Error('Fixture de parcelamento para excluir nao criou 3 parcelas')
+  const respostaExclusao = await excluir(
+    usuarioA.token, parcelasExclusao[1].id, '20202020-2020-4202-8202-202020202020',
+  )
+  if (respostaExclusao.status !== 200) throw new Error(`DELETE da parcela do meio retornou ${respostaExclusao.status}`)
+  const restantesExclusao = await pool.query<{ id: string; total_parcelas: number }>(
+    'select id, total_parcelas from lancamentos where parcelamento_id = $1',
+    [parcelasExclusao[0].parcelamentoId ?? parcelasExclusao[0].id],
+  )
+  if (restantesExclusao.rows.length !== 2) throw new Error('Excluir a parcela do meio nao removeu exatamente uma linha')
+  if (restantesExclusao.rows.some((linha) => Number(linha.total_parcelas) !== 2)) {
+    throw new Error('Excluir a parcela do meio nao corrigiu totalParcelas das remanescentes para 2')
+  }
+  console.log('DELETE de parcela do meio provou a correcao de totalParcelas nas remanescentes')
+
+  // Isolamento entre usuarios: usuarioB tentando editar/excluir um lancamento de usuarioA leva
+  // a 404 (buscarPorId filtra por userId), nunca expondo nem alterando o dado de outra conta
+  // (achado da auditoria F5, T-02.01).
+  const respostaEdicaoCruzada = await editar(
+    usuarioB.token, parcelasEdicao[0].id, '30303030-3030-4303-8303-303030303030',
+    { tipo: 'despesa', descricao: 'Tentativa indevida', valor: 1, vencimento: emDias(5) },
+  )
+  if (respostaEdicaoCruzada.status !== 404) {
+    throw new Error(`PATCH entre usuarios deveria devolver 404, devolveu ${respostaEdicaoCruzada.status}`)
+  }
+  const respostaExclusaoCruzada = await excluir(usuarioB.token, parcelasEdicao[0].id, '40404040-4040-4404-8404-404040404040')
+  if (respostaExclusaoCruzada.status !== 404) {
+    throw new Error(`DELETE entre usuarios deveria devolver 404, devolveu ${respostaExclusaoCruzada.status}`)
+  }
+  console.log('PATCH/DELETE entre usuarios provaram isolamento por userId (404, nunca vazamento)')
+
+  // Bloqueio de receita vinculada a uma caixinha: insere diretamente a linha de vinculo (sem
+  // depender da rota de caixinhas) e confirma que editar/excluir recusam com 409.
+  const [receitaVinculo] = await criarSemIdempotencia(usuarioA.token, {
+    tipo: 'receita', descricao: 'Receita de caixinha (integracao)', valor: 5000, dataEmissao: emDias(0),
+  })
+  await pool.query(
+    `insert into caixinha_movimentacoes (user_id, caixinha_id, tipo, origem, valor, lancamento_id)
+     values ($1, gen_random_uuid(), 'deposito', 'de_fora', $2, $3)`,
+    [usuarioA.id, 5000, receitaVinculo.id],
+  )
+  try {
+    const respostaEdicaoVinculo = await editar(
+      usuarioA.token, receitaVinculo.id, '50505050-5050-4505-8505-505050505050',
+      { tipo: 'receita', descricao: 'Tentativa indevida', valor: 1, dataEmissao: emDias(0) },
+    )
+    if (respostaEdicaoVinculo.status !== 409) {
+      throw new Error(`PATCH de receita vinculada a caixinha deveria devolver 409, devolveu ${respostaEdicaoVinculo.status}`)
+    }
+    const respostaExclusaoVinculo = await excluir(usuarioA.token, receitaVinculo.id, '60606060-6060-4606-8606-606060606060')
+    if (respostaExclusaoVinculo.status !== 409) {
+      throw new Error(`DELETE de receita vinculada a caixinha deveria devolver 409, devolveu ${respostaExclusaoVinculo.status}`)
+    }
+    console.log('PATCH/DELETE de receita vinculada a caixinha provaram o bloqueio 409 (D-04)')
+  } finally {
+    await pool.query('delete from caixinha_movimentacoes where lancamento_id = $1', [receitaVinculo.id])
+  }
 } finally {
   await pool.query('delete from idempotencias where user_id = any($1::uuid[])', [
     [usuarioA.id, usuarioB.id],

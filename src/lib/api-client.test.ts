@@ -113,6 +113,25 @@ describe('apiClient', () => {
       .toBe('22222222-2222-4222-8222-222222222222')
   })
 
+  it('patchIdempotente e deleteIdempotente enviam Idempotency-Key e o metodo HTTP certo', async () => {
+    const fetcher = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    }))
+    const cliente = criarApiClient({
+      baseUrl: 'https://api.example.test', obterToken: async () => 'jwt', fetcher,
+      gerarChave: () => '11111111-1111-4111-8111-111111111111',
+    })
+
+    await cliente.patchIdempotente('/lancamentos/id-1', { descricao: 'Nova' })
+    await cliente.deleteIdempotente('/lancamentos/id-1')
+
+    const [patchReq, deleteReq] = fetcher.mock.calls.map(([request]) => request as Request)
+    expect(patchReq.method).toBe('PATCH')
+    expect(patchReq.headers.get('Idempotency-Key')).toBe('11111111-1111-4111-8111-111111111111')
+    expect(deleteReq.method).toBe('DELETE')
+    expect(deleteReq.headers.get('Idempotency-Key')).toBe('11111111-1111-4111-8111-111111111111')
+  })
+
   it('gera por padrao UUID v4 valido e distinto para cada operacao', async () => {
     const fetcher = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ ok: true }), {
       status: 200, headers: { 'Content-Type': 'application/json' },

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { ApiError } from '@/lib/api-client'
+
 import {
   criarClienteCaixinhasTeste,
   criarClienteLancamentosTeste,
@@ -80,5 +82,50 @@ describe('criarClienteCaixinhasTeste com origem', () => {
 
     const resumo = await clienteLancamentos.get<{ receitas: number; despesas: number }>('/lancamentos/resumo')
     expect(resumo.receitas).toBe(0)
+  })
+})
+
+describe('criarClienteLancamentosTeste — editar e excluir', () => {
+  it('patchIdempotente edita descricao e valor do lancamento', async () => {
+    const cliente = criarClienteLancamentosTeste([
+      { id: 'd1', tipo: 'despesa', descricao: 'Luz', valor: 100, vencimento: '2026-10-20', paga: false },
+    ])
+
+    const atualizado = await cliente.patchIdempotente<{ descricao: string; valor: number }[]>(
+      '/lancamentos/d1',
+      { descricao: 'Luz e água', valor: 150 },
+    )
+
+    expect(atualizado).toMatchObject([{ descricao: 'Luz e água', valor: 150 }])
+  })
+
+  it('deleteIdempotente com alcance futuras remove a parcela e as seguintes nao pagas, corrigindo totalParcelas', async () => {
+    const cliente = criarClienteLancamentosTeste([
+      { id: 'p1', tipo: 'despesa', descricao: 'Notebook', valor: 100, vencimento: '2026-10-10', paga: true, parcelamentoId: 'pc1', parcelaAtual: 1, totalParcelas: 3 },
+      { id: 'p2', tipo: 'despesa', descricao: 'Notebook', valor: 100, vencimento: '2026-11-10', paga: false, parcelamentoId: 'pc1', parcelaAtual: 2, totalParcelas: 3 },
+      { id: 'p3', tipo: 'despesa', descricao: 'Notebook', valor: 100, vencimento: '2026-12-10', paga: false, parcelamentoId: 'pc1', parcelaAtual: 3, totalParcelas: 3 },
+    ])
+
+    const resultado = await cliente.deleteIdempotente<{ idsExcluidos: string[] }>('/lancamentos/p2?alcance=futuras')
+    expect(resultado.idsExcluidos.sort()).toEqual(['p2', 'p3'])
+
+    const restantes = await cliente.get<{ itens: { id: string; totalParcelas: number }[] }>('/lancamentos?tipo=despesa')
+    expect(restantes.itens).toMatchObject([{ id: 'p1', totalParcelas: 1 }])
+  })
+
+  it('patchIdempotente e deleteIdempotente recusam lancamento vinculado a uma caixinha com 409', async () => {
+    const estadoLancamentos = criarEstadoLancamentosTeste([])
+    const clienteCaixinhas = criarClienteCaixinhasTeste([], { lancamentosEstado: estadoLancamentos })
+    const clienteLancamentos = criarClienteLancamentosTeste([], estadoLancamentos)
+    const criada = await clienteCaixinhas.post<{ id: string }>('/caixinhas', { nome: 'Viagem', meta: 100000 })
+    await clienteCaixinhas.postIdempotente(`/caixinhas/${criada.id}/depositar`, { valor: 50000, origem: 'de_fora' })
+    const [receita] = estadoLancamentos.dados
+
+    await expect(
+      clienteLancamentos.patchIdempotente(`/lancamentos/${receita.id}`, { descricao: 'x', valor: 1 }),
+    ).rejects.toMatchObject({ status: 409 } satisfies Partial<ApiError>)
+    await expect(
+      clienteLancamentos.deleteIdempotente(`/lancamentos/${receita.id}`),
+    ).rejects.toMatchObject({ status: 409 } satisfies Partial<ApiError>)
   })
 })

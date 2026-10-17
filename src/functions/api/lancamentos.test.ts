@@ -12,10 +12,14 @@ import {
   type RepositorioLancamentos,
 } from './lancamentos'
 
-function criarRepositorio(): RepositorioLancamentos {
+/** Sem anotacao de retorno RepositorioLancamentos: editar/excluir ainda nao existem na
+ * interface (chegam na sprint-02). Sem a anotacao, o literal infere um tipo mais largo e o
+ * TS nao bloqueia por excesso de propriedade; quando a interface for estendida, a forma ja
+ * bate e nada aqui precisa mudar. */
+function criarRepositorio() {
   return {
     listar: vi.fn().mockResolvedValue({ itens: [], proximoCursor: null }),
-    resumo: vi.fn().mockResolvedValue({ receitas: 0, despesas: 0 }),
+    resumo: vi.fn().mockResolvedValue({ receitas: 0, despesas: 0, despesasPagas: 0 }),
     listarParcelamentos: vi.fn().mockResolvedValue({ itens: [], proximoCursor: null }),
     listarVencendo: vi.fn().mockResolvedValue({ itens: [] }),
     listarRecentes: vi.fn().mockResolvedValue({ itens: [] }),
@@ -26,6 +30,7 @@ function criarRepositorio(): RepositorioLancamentos {
         dataEmissao: item.dataEmissao ?? null,
         vencimento: item.vencimento ?? null,
         paga: item.paga ?? false,
+        pagoEm: item.pagoEm ?? null,
         parcelamentoId: item.parcelamentoId ?? null,
         parcelaAtual: item.parcelaAtual ?? null,
         totalParcelas: item.totalParcelas ?? null,
@@ -34,6 +39,10 @@ function criarRepositorio(): RepositorioLancamentos {
       })),
     ),
     marcarComoPaga: vi.fn().mockResolvedValue({ id: '11111111-1111-1111-1111-111111111111', paga: true }),
+    buscarPorId: vi.fn().mockResolvedValue(null),
+    estaVinculadoACaixinha: vi.fn().mockResolvedValue(false),
+    editar: vi.fn().mockResolvedValue([]),
+    excluir: vi.fn().mockResolvedValue({ idsExcluidos: [] }),
   }
 }
 
@@ -117,13 +126,13 @@ describe('rotas de lancamentos', () => {
     expect(repositorio.listar).not.toHaveBeenCalled()
   })
 
-  it('resume receitas e despesas do usuário no mês pedido', async () => {
-    vi.mocked(repositorio.resumo).mockResolvedValue({ receitas: 500000, despesas: 120000 })
+  it('resume receitas, despesas e despesas pagas do usuário no mês pedido', async () => {
+    vi.mocked(repositorio.resumo).mockResolvedValue({ receitas: 500000, despesas: 120000, despesasPagas: 45000 })
 
     const resposta = await criarApp(repositorio).request('/lancamentos/resumo?mes=2026-10')
 
     expect(resposta.status).toBe(200)
-    expect(await resposta.json()).toEqual({ receitas: 500000, despesas: 120000 })
+    expect(await resposta.json()).toEqual({ receitas: 500000, despesas: 120000, despesasPagas: 45000 })
     expect(repositorio.resumo).toHaveBeenCalledWith('usuario-1', '2026-10')
   })
 
@@ -307,6 +316,123 @@ describe('rotas de lancamentos', () => {
   })
 })
 
+describe('PATCH /lancamentos/:id — editar', () => {
+  let repositorio: ReturnType<typeof criarRepositorio>
+  const despesa = {
+    id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', tipo: 'despesa' as const, descricao: 'Luz', valor: 100, vencimento: '2026-10-10',
+    userId: 'usuario-1', paga: false, pagoEm: null, parcelamentoId: null, parcelaAtual: null,
+    totalParcelas: null, dataEmissao: null, criadoEm: new Date(), atualizadoEm: new Date(),
+  }
+  const corpoValido = { tipo: 'despesa', descricao: 'Luz e água', valor: 150, vencimento: '2026-10-10' }
+
+  beforeEach(() => {
+    repositorio = criarRepositorio()
+  })
+
+  it('sem Idempotency-Key devolve 400 sem consultar o lancamento', async () => {
+    const resposta = await criarApp(repositorio).request('/lancamentos/dddddddd-dddd-4ddd-8ddd-dddddddddddd', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpoValido),
+    })
+
+    expect(resposta.status).toBe(400)
+    expect(repositorio.buscarPorId).not.toHaveBeenCalled()
+  })
+
+  it('com a mesma chave e payload diferente devolve 409', async () => {
+    vi.mocked(repositorio.buscarPorId).mockResolvedValue(despesa)
+    const app = criarApp(repositorio)
+    const chave = '44444444-4444-4444-8444-444444444444'
+    const enviar = (valor: number) => app.request('/lancamentos/dddddddd-dddd-4ddd-8ddd-dddddddddddd', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': chave },
+      body: JSON.stringify({ ...corpoValido, valor }),
+    })
+
+    expect((await enviar(150)).status).toBe(200)
+    expect((await enviar(151)).status).toBe(409)
+    expect(repositorio.editar).toHaveBeenCalledTimes(1)
+  })
+
+  it('id inexistente devolve 404', async () => {
+    vi.mocked(repositorio.buscarPorId).mockResolvedValue(null)
+
+    const resposta = await criarApp(repositorio).request('/lancamentos/dddddddd-dddd-4ddd-8ddd-dddddddddddd', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': '55555555-5555-4555-8555-555555555555' },
+      body: JSON.stringify(corpoValido),
+    })
+
+    expect(resposta.status).toBe(404)
+  })
+
+  it('lancamento vinculado a uma caixinha devolve 409 sem chamar repositorio.editar', async () => {
+    vi.mocked(repositorio.buscarPorId).mockResolvedValue(despesa)
+    vi.mocked(repositorio.estaVinculadoACaixinha).mockResolvedValue(true)
+
+    const resposta = await criarApp(repositorio).request('/lancamentos/dddddddd-dddd-4ddd-8ddd-dddddddddddd', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': '66666666-6666-4666-8666-666666666666' },
+      body: JSON.stringify(corpoValido),
+    })
+
+    expect(resposta.status).toBe(409)
+    expect(repositorio.editar).not.toHaveBeenCalled()
+  })
+})
+
+describe('DELETE /lancamentos/:id — excluir', () => {
+  let repositorio: ReturnType<typeof criarRepositorio>
+  const despesa = {
+    id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', tipo: 'despesa' as const, descricao: 'Luz', valor: 100, vencimento: '2026-10-10',
+    userId: 'usuario-1', paga: false, pagoEm: null, parcelamentoId: null, parcelaAtual: null,
+    totalParcelas: null, dataEmissao: null, criadoEm: new Date(), atualizadoEm: new Date(),
+  }
+
+  beforeEach(() => {
+    repositorio = criarRepositorio()
+  })
+
+  it('sem Idempotency-Key devolve 400 sem consultar o lancamento', async () => {
+    const resposta = await criarApp(repositorio).request('/lancamentos/dddddddd-dddd-4ddd-8ddd-dddddddddddd', { method: 'DELETE' })
+
+    expect(resposta.status).toBe(400)
+    expect(repositorio.buscarPorId).not.toHaveBeenCalled()
+  })
+
+  it('id inexistente devolve 404', async () => {
+    vi.mocked(repositorio.buscarPorId).mockResolvedValue(null)
+
+    const resposta = await criarApp(repositorio).request('/lancamentos/dddddddd-dddd-4ddd-8ddd-dddddddddddd', {
+      method: 'DELETE', headers: { 'Idempotency-Key': '77777777-7777-4777-8777-777777777777' },
+    })
+
+    expect(resposta.status).toBe(404)
+  })
+
+  it('lancamento vinculado a uma caixinha devolve 409 sem chamar repositorio.excluir', async () => {
+    vi.mocked(repositorio.buscarPorId).mockResolvedValue(despesa)
+    vi.mocked(repositorio.estaVinculadoACaixinha).mockResolvedValue(true)
+
+    const resposta = await criarApp(repositorio).request('/lancamentos/dddddddd-dddd-4ddd-8ddd-dddddddddddd', {
+      method: 'DELETE', headers: { 'Idempotency-Key': '88888888-8888-4888-8888-888888888888' },
+    })
+
+    expect(resposta.status).toBe(409)
+    expect(repositorio.excluir).not.toHaveBeenCalled()
+  })
+
+  it('exclusao bem sucedida devolve 200 com os ids excluidos', async () => {
+    vi.mocked(repositorio.buscarPorId).mockResolvedValue(despesa)
+    vi.mocked(repositorio.excluir).mockResolvedValue({ idsExcluidos: ['dddddddd-dddd-4ddd-8ddd-dddddddddddd'] })
+
+    const resposta = await criarApp(repositorio).request('/lancamentos/dddddddd-dddd-4ddd-8ddd-dddddddddddd', {
+      method: 'DELETE', headers: { 'Idempotency-Key': '99999999-9999-4999-8999-999999999999' },
+    })
+
+    expect(resposta.status).toBe(200)
+    expect(await resposta.json()).toEqual({ idsExcluidos: ['dddddddd-dddd-4ddd-8ddd-dddddddddddd'] })
+  })
+})
+
 describe('projeção da listagem de lancamentos', () => {
   it('seleciona só as colunas da tela mais criadoEm para o cursor', () => {
     expect(Object.keys(colunasLancamentoListado).sort()).toEqual([
@@ -315,6 +441,7 @@ describe('projeção da listagem de lancamentos', () => {
       'descricao',
       'id',
       'paga',
+      'pagoEm',
       'parcelaAtual',
       'parcelamentoId',
       'tipo',
@@ -333,6 +460,7 @@ describe('projeção da listagem de lancamentos', () => {
       dataEmissao: null,
       vencimento: '2026-10-10',
       paga: false,
+      pagoEm: null,
       parcelamentoId: null,
       parcelaAtual: null,
       totalParcelas: null,
@@ -347,6 +475,7 @@ describe('projeção da listagem de lancamentos', () => {
       'descricao',
       'id',
       'paga',
+      'pagoEm',
       'parcelaAtual',
       'parcelamentoId',
       'tipo',
@@ -366,6 +495,7 @@ describe('projeção da listagem de lancamentos', () => {
       dataEmissao: '2026-10-01',
       vencimento: null,
       paga: false,
+      pagoEm: null,
       parcelamentoId: null,
       parcelaAtual: null,
       totalParcelas: null,
@@ -376,5 +506,18 @@ describe('projeção da listagem de lancamentos', () => {
 
     expect(await resposta.json()).toEqual({ itens, proximoCursor: 'proximo' })
     expect(repositorio.listar).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('capacidade de teste — repositorio fake de editar/excluir', () => {
+  it('criarRepositorio() expoe editar e excluir mockaveis com resolvedValue e rejectedValue proprios', async () => {
+    const repositorio = criarRepositorio()
+    vi.mocked(repositorio.editar).mockResolvedValue([{ id: 'x', descricao: 'Editado' }])
+    vi.mocked(repositorio.excluir).mockRejectedValue(new Error('falha de exclusao'))
+
+    await expect(repositorio.editar('user-1', 'x', {}, 'somente')).resolves.toEqual([
+      { id: 'x', descricao: 'Editado' },
+    ])
+    await expect(repositorio.excluir('user-1', 'x', 'somente')).rejects.toThrow('falha de exclusao')
   })
 })

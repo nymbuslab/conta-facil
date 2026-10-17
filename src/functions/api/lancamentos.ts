@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import {
+  caixinhaMovimentacoes,
   lancamentos,
   type LancamentoBanco,
   type NovoLancamentoBanco,
@@ -37,6 +38,21 @@ const criarLancamentoSchema = z.discriminatedUnion('tipo', [
     vencimento: z.string().date(),
     parcelado: z.boolean().optional().default(false),
     quantidadeParcelas: z.number().int().min(2).max(360).optional(),
+  }),
+])
+
+const alcanceSchema = z.enum(['somente', 'futuras'])
+
+const editarLancamentoSchema = z.discriminatedUnion('tipo', [
+  baseLancamentoSchema.extend({
+    tipo: z.literal('receita'),
+    dataEmissao: z.string().date(),
+    alcance: alcanceSchema.optional(),
+  }),
+  baseLancamentoSchema.extend({
+    tipo: z.literal('despesa'),
+    vencimento: z.string().date(),
+    alcance: alcanceSchema.optional(),
   }),
 ])
 
@@ -83,6 +99,7 @@ export interface FiltrosPagina {
 export interface ResumoLancamentos {
   receitas: number
   despesas: number
+  despesasPagas: number
 }
 
 export interface GrupoParcelamentoBanco {
@@ -104,6 +121,7 @@ export interface LancamentoListado {
   dataEmissao: string | null
   vencimento: string | null
   paga: boolean
+  pagoEm: string | null
   parcelamentoId: string | null
   parcelaAtual: number | null
   totalParcelas: number | null
@@ -119,6 +137,7 @@ export const colunasLancamentoListado = {
   dataEmissao: lancamentos.dataEmissao,
   vencimento: lancamentos.vencimento,
   paga: lancamentos.paga,
+  pagoEm: lancamentos.pagoEm,
   parcelamentoId: lancamentos.parcelamentoId,
   parcelaAtual: lancamentos.parcelaAtual,
   totalParcelas: lancamentos.totalParcelas,
@@ -137,6 +156,7 @@ export function paraLancamentoListado(
     dataEmissao: item.dataEmissao,
     vencimento: item.vencimento,
     paga: item.paga,
+    pagoEm: item.pagoEm,
     parcelamentoId: item.parcelamentoId,
     parcelaAtual: item.parcelaAtual,
     totalParcelas: item.totalParcelas,
@@ -152,6 +172,15 @@ export interface FiltrosRecentes {
   limite: number
 }
 
+export type AlcanceEdicao = 'somente' | 'futuras'
+
+export type DadosEdicaoLancamento = {
+  descricao: string
+  valor: number
+  dataEmissao?: string
+  vencimento?: string
+}
+
 export type RepositorioLancamentos = {
   listar: (userId: string, filtros: FiltrosLancamentos) => Promise<Pagina<LancamentoListado>>
   resumo: (userId: string, mes?: string) => Promise<ResumoLancamentos>
@@ -160,6 +189,21 @@ export type RepositorioLancamentos = {
   marcarComoPaga: (userId: string, id: string) => Promise<LancamentoBanco | null>
   listarVencendo: (userId: string, filtros: FiltrosVencendo) => Promise<{ itens: LancamentoListado[] }>
   listarRecentes: (userId: string, filtros: FiltrosRecentes) => Promise<{ itens: LancamentoListado[] }>
+  buscarPorId: (userId: string, id: string) => Promise<LancamentoBanco | null>
+  estaVinculadoACaixinha: (id: string) => Promise<boolean>
+  editar: (
+    userId: string,
+    atual: LancamentoBanco,
+    dados: DadosEdicaoLancamento,
+    alcance: AlcanceEdicao,
+    banco?: unknown,
+  ) => Promise<LancamentoBanco[]>
+  excluir: (
+    userId: string,
+    atual: LancamentoBanco,
+    alcance: AlcanceEdicao,
+    banco?: unknown,
+  ) => Promise<{ idsExcluidos: string[] }>
 }
 
 const repositorioPadrao: RepositorioLancamentos = {
@@ -186,15 +230,19 @@ const repositorioPadrao: RepositorioLancamentos = {
       .select({
         tipo: lancamentos.tipo,
         soma: sql<number>`coalesce(sum(${lancamentos.valor}), 0)::int`,
+        somaPaga: sql<number>`coalesce(sum(${lancamentos.valor}) filter (where ${lancamentos.paga}), 0)::int`,
       })
       .from(lancamentos)
       .where(and(...condicoes))
       .groupBy(lancamentos.tipo)
 
-    const resumo: ResumoLancamentos = { receitas: 0, despesas: 0 }
+    const resumo: ResumoLancamentos = { receitas: 0, despesas: 0, despesasPagas: 0 }
     for (const linha of linhas) {
       if (linha.tipo === 'receita') resumo.receitas = linha.soma
-      else resumo.despesas = linha.soma
+      else {
+        resumo.despesas = linha.soma
+        resumo.despesasPagas = linha.somaPaga
+      }
     }
     return resumo
   },
@@ -241,9 +289,10 @@ const repositorioPadrao: RepositorioLancamentos = {
     return banco.insert(lancamentos).values(dados).returning()
   },
   async marcarComoPaga(userId, id) {
+    const hoje = new Date().toISOString().slice(0, 10)
     const [atualizado] = await obterBanco()
       .update(lancamentos)
-      .set({ paga: true, atualizadoEm: new Date() })
+      .set({ paga: true, pagoEm: hoje, atualizadoEm: new Date() })
       .where(
         and(
           eq(lancamentos.id, id),
@@ -282,6 +331,83 @@ const repositorioPadrao: RepositorioLancamentos = {
       .orderBy(desc(lancamentos.criadoEm), desc(lancamentos.id))
       .limit(filtros.limite)
     return { itens: linhas.map(paraLancamentoListado) }
+  },
+  async buscarPorId(userId, id) {
+    const [linha] = await obterBanco()
+      .select()
+      .from(lancamentos)
+      .where(and(eq(lancamentos.id, id), eq(lancamentos.userId, userId)))
+    return linha ?? null
+  },
+  async estaVinculadoACaixinha(id) {
+    const [linha] = await obterBanco()
+      .select({ id: caixinhaMovimentacoes.id })
+      .from(caixinhaMovimentacoes)
+      .where(eq(caixinhaMovimentacoes.lancamentoId, id))
+      .limit(1)
+    return Boolean(linha)
+  },
+  async editar(userId, atual, dados, alcance, transacao) {
+    const banco = (transacao ?? obterBanco()) as ReturnType<typeof obterBanco>
+    const camposComuns = { descricao: dados.descricao, valor: dados.valor, atualizadoEm: new Date() }
+
+    if (alcance === 'futuras' && atual.parcelamentoId) {
+      return banco
+        .update(lancamentos)
+        .set(camposComuns)
+        .where(
+          and(
+            eq(lancamentos.userId, userId),
+            eq(lancamentos.parcelamentoId, atual.parcelamentoId),
+            gte(lancamentos.parcelaAtual, atual.parcelaAtual ?? 0),
+            eq(lancamentos.paga, false),
+          ),
+        )
+        .returning()
+    }
+
+    const campos = atual.tipo === 'receita'
+      ? { ...camposComuns, dataEmissao: dados.dataEmissao ?? atual.dataEmissao }
+      : { ...camposComuns, vencimento: dados.vencimento ?? atual.vencimento }
+    return banco
+      .update(lancamentos)
+      .set(campos)
+      .where(and(eq(lancamentos.id, atual.id), eq(lancamentos.userId, userId)))
+      .returning()
+  },
+  async excluir(userId, atual, alcance, transacao) {
+    const banco = (transacao ?? obterBanco()) as ReturnType<typeof obterBanco>
+
+    const excluidas =
+      alcance === 'futuras' && atual.parcelamentoId
+        ? await banco
+            .delete(lancamentos)
+            .where(
+              and(
+                eq(lancamentos.userId, userId),
+                eq(lancamentos.parcelamentoId, atual.parcelamentoId),
+                gte(lancamentos.parcelaAtual, atual.parcelaAtual ?? 0),
+                eq(lancamentos.paga, false),
+              ),
+            )
+            .returning({ id: lancamentos.id })
+        : await banco
+            .delete(lancamentos)
+            .where(and(eq(lancamentos.id, atual.id), eq(lancamentos.userId, userId)))
+            .returning({ id: lancamentos.id })
+
+    if (atual.parcelamentoId) {
+      const [restantes] = await banco
+        .select({ total: sql<number>`count(*)::int` })
+        .from(lancamentos)
+        .where(and(eq(lancamentos.userId, userId), eq(lancamentos.parcelamentoId, atual.parcelamentoId)))
+      await banco
+        .update(lancamentos)
+        .set({ totalParcelas: restantes?.total ?? 0 })
+        .where(and(eq(lancamentos.userId, userId), eq(lancamentos.parcelamentoId, atual.parcelamentoId)))
+    }
+
+    return { idsExcluidos: excluidas.map((item) => item.id) }
   },
 }
 
@@ -512,6 +638,97 @@ export function criarRotasLancamentos(
     const atualizado = await repositorio.marcarComoPaga(contexto.get('userId'), id.data)
     if (!atualizado) return contexto.json({ erro: 'Lançamento não encontrado' }, 404)
     return contexto.json(atualizado)
+  })
+
+  app.patch('/:id', async (contexto) => {
+    const id = idParamSchema.safeParse(contexto.req.param('id'))
+    if (!id.success) return contexto.json({ erro: 'Lançamento não encontrado' }, 404)
+
+    const corpo = await lerCorpoJson(contexto)
+    if (!corpo.sucesso) return contexto.json({ erro: 'Dados inválidos' }, 400)
+    const resultado = editarLancamentoSchema.safeParse(corpo.dados)
+    if (!resultado.success) return contexto.json({ erro: 'Dados inválidos' }, 400)
+
+    const chave = contexto.req.header('Idempotency-Key')
+    if (!chave) return contexto.json({ erro: 'Idempotency-Key obrigatória' }, 400)
+    const chaveValida = z.string().uuid().safeParse(chave)
+    if (!chaveValida.success) return contexto.json({ erro: 'Chave de idempotência inválida' }, 400)
+
+    const userId = contexto.get('userId')
+    const atual = await repositorio.buscarPorId(userId, id.data)
+    if (!atual) return contexto.json({ erro: 'Lançamento não encontrado' }, 404)
+    if (atual.tipo !== resultado.data.tipo) return contexto.json({ erro: 'Dados inválidos' }, 400)
+
+    const alcance = resultado.data.alcance ?? 'somente'
+    if (alcance === 'futuras' && !atual.parcelamentoId) {
+      return contexto.json({ erro: 'Lançamento não pertence a um parcelamento' }, 400)
+    }
+    if (await repositorio.estaVinculadoACaixinha(id.data)) {
+      return contexto.json(
+        { erro: 'Lançamento vinculado a um depósito em caixinha — edite ou exclua por lá' },
+        409,
+      )
+    }
+
+    const dados: DadosEdicaoLancamento = {
+      descricao: resultado.data.descricao,
+      valor: resultado.data.valor,
+      dataEmissao: resultado.data.tipo === 'receita' ? resultado.data.dataEmissao : undefined,
+      vencimento: resultado.data.tipo === 'despesa' ? resultado.data.vencimento : undefined,
+    }
+
+    const idempotencia = await executarIdempotencia({
+      userId,
+      chave: chaveValida.data,
+      operacao: 'lancamentos.editar',
+      payload: resultado.data,
+    }, async (banco) => ({
+      status: 200,
+      corpo: await repositorio.editar(userId, atual, dados, alcance, banco),
+    }))
+    if (idempotencia.tipo === 'conflito') {
+      return contexto.json({ erro: 'Chave de idempotência já usada com outro pedido' }, 409)
+    }
+    return contexto.json(idempotencia.corpo as LancamentoBanco[], 200)
+  })
+
+  app.delete('/:id', async (contexto) => {
+    const id = idParamSchema.safeParse(contexto.req.param('id'))
+    if (!id.success) return contexto.json({ erro: 'Lançamento não encontrado' }, 404)
+
+    const chave = contexto.req.header('Idempotency-Key')
+    if (!chave) return contexto.json({ erro: 'Idempotency-Key obrigatória' }, 400)
+    const chaveValida = z.string().uuid().safeParse(chave)
+    if (!chaveValida.success) return contexto.json({ erro: 'Chave de idempotência inválida' }, 400)
+
+    const userId = contexto.get('userId')
+    const alcance: AlcanceEdicao = contexto.req.query('alcance') === 'futuras' ? 'futuras' : 'somente'
+
+    const atual = await repositorio.buscarPorId(userId, id.data)
+    if (!atual) return contexto.json({ erro: 'Lançamento não encontrado' }, 404)
+    if (alcance === 'futuras' && !atual.parcelamentoId) {
+      return contexto.json({ erro: 'Lançamento não pertence a um parcelamento' }, 400)
+    }
+    if (await repositorio.estaVinculadoACaixinha(id.data)) {
+      return contexto.json(
+        { erro: 'Lançamento vinculado a um depósito em caixinha — edite ou exclua por lá' },
+        409,
+      )
+    }
+
+    const idempotencia = await executarIdempotencia({
+      userId,
+      chave: chaveValida.data,
+      operacao: 'lancamentos.excluir',
+      payload: { id: id.data, alcance },
+    }, async (banco) => ({
+      status: 200,
+      corpo: await repositorio.excluir(userId, atual, alcance, banco),
+    }))
+    if (idempotencia.tipo === 'conflito') {
+      return contexto.json({ erro: 'Chave de idempotência já usada com outro pedido' }, 409)
+    }
+    return contexto.json(idempotencia.corpo as { idsExcluidos: string[] }, 200)
   })
 
   return app
