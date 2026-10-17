@@ -4,7 +4,16 @@
 
 ## 🔄 Em Andamento
 
-Nenhum item em andamento.
+- Proxy reverso `/auth/*` para o Neon Auth (feature `proxy-reverso-neon-auth`), para resolver a
+  sessão não persistindo em navegadores que bloqueiam cookie de terceiros (Brave sempre, mobile
+  com frequência): causa raiz é o Neon Auth rodar num domínio diferente do app, tornando o
+  cookie de sessão "de terceiros". Código implementado e validado (`functions/auth/[[catchall]].js`,
+  CSP ajustada em `scripts/gerar-headers-producao.mjs`, `DEPLOY.md` atualizado; build, lint e 349
+  testes verdes, 3 novos). **Falta**: configurar `NEON_AUTH_UPSTREAM_URL` (env var de Functions)
+  e trocar `VITE_NEON_AUTH_BASE_URL` (env var de build) no painel do Cloudflare Pages, seguindo a
+  ordem de rollout documentada em `DEPLOY.md`/`docs/sprintx/features/proxy-reverso-neon-auth/`
+  (primeiro Preview/branch `test`, validar com conta de teste do pentest, só depois Production) —
+  nada disso foi aplicado ainda, é configuração de painel que exige decisão/ação do usuário.
 
 ## 📋 Próximos Passos
 

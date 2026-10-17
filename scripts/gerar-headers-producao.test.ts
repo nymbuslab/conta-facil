@@ -16,11 +16,10 @@ describe('montarCabecalhosProducao', () => {
     expect(conteudo).toContain('Referrer-Policy: strict-origin-when-cross-origin')
   })
 
-  it('o connect-src da CSP usa so a origem (sem o caminho) da Function e do Auth', () => {
+  it('o connect-src da CSP usa so a origem (sem o caminho) da Function, sem o Auth (vai via proxy same-origin)', () => {
     const conteudo = montarCabecalhosProducao(opcoes)
-    expect(conteudo).toContain(
-      "connect-src 'self' https://minha-function.neon.tech https://meu-auth.neonauth.neon.tech",
-    )
+    expect(conteudo).toContain("connect-src 'self' https://minha-function.neon.tech")
+    expect(conteudo).not.toContain('meu-auth.neonauth.neon.tech')
     expect(conteudo).not.toContain('/api')
     expect(conteudo).not.toContain('/auth')
   })
