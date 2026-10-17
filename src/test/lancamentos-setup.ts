@@ -118,6 +118,77 @@ try {
   }
 
   console.log('Lancamentos reais provaram replay concorrente, conflito e isolamento por usuario')
+
+  // --- /lancamentos/vencendo e /lancamentos/recentes (dashboard-extrato) ---
+  function emDias(deslocamento: number) {
+    const data = new Date()
+    data.setDate(data.getDate() + deslocamento)
+    return data.toISOString().slice(0, 10)
+  }
+
+  const criarSemIdempotencia = async (token: string, corpoJson: Record<string, unknown>) => {
+    const resposta = await app.request('/lancamentos', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(corpoJson),
+    })
+    return (await resposta.json()) as Array<{ id: string }>
+  }
+
+  const [[despesaProximaA], [despesaPagaA], [despesaProximaB]] = await Promise.all([
+    criarSemIdempotencia(usuarioA.token, {
+      tipo: 'despesa', descricao: 'Vencendo integracao A', valor: 500, vencimento: emDias(1),
+    }),
+    criarSemIdempotencia(usuarioA.token, {
+      tipo: 'despesa', descricao: 'Paga integracao A', valor: 700, vencimento: emDias(1),
+    }),
+    criarSemIdempotencia(usuarioB.token, {
+      tipo: 'despesa', descricao: 'Vencendo integracao B', valor: 900, vencimento: emDias(1),
+    }),
+  ])
+  await app.request(`/lancamentos/${despesaPagaA.id}/pagar`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${usuarioA.token}` },
+  })
+  await criarSemIdempotencia(usuarioA.token, {
+    tipo: 'receita', descricao: 'Receita recente integracao', valor: 1234, dataEmissao: emDias(0),
+  })
+
+  const vencendoA = await app.request('/lancamentos/vencendo?dias=2', {
+    headers: { Authorization: `Bearer ${usuarioA.token}` },
+  })
+  const dadosVencendoA = (await vencendoA.json()) as { itens: Array<Record<string, unknown>> }
+  if (!dadosVencendoA.itens.some((item) => item.descricao === 'Vencendo integracao A')) {
+    throw new Error('Vencendo nao trouxe a despesa nao paga dentro da janela')
+  }
+  if (dadosVencendoA.itens.some((item) => item.descricao === 'Paga integracao A')) {
+    throw new Error('Vencendo trouxe despesa ja paga')
+  }
+  if (dadosVencendoA.itens.some((item) => item.descricao === 'Vencendo integracao B')) {
+    throw new Error('Vencendo nao isolou por usuario')
+  }
+  if (despesaProximaA.id === undefined || despesaProximaB.id === undefined) {
+    throw new Error('Falha ao preparar fixtures de vencendo')
+  }
+
+  const recentesA = await app.request('/lancamentos/recentes?limite=5', {
+    headers: { Authorization: `Bearer ${usuarioA.token}` },
+  })
+  const dadosRecentesA = (await recentesA.json()) as { itens: Array<Record<string, unknown>> }
+  if (dadosRecentesA.itens.length === 0 || dadosRecentesA.itens.length > 5) {
+    throw new Error('Recentes nao respeitou o limite pedido')
+  }
+  if (!dadosRecentesA.itens.some((item) => item.tipo === 'receita')) {
+    throw new Error('Recentes nao misturou receita entre os tipos')
+  }
+  if (!dadosRecentesA.itens.some((item) => item.descricao === 'Receita recente integracao')) {
+    throw new Error('Recentes nao trouxe o lancamento mais recente de usuarioA')
+  }
+  if (dadosRecentesA.itens.some((item) => item.descricao === 'Vencendo integracao B')) {
+    throw new Error('Recentes nao isolou por usuario')
+  }
+
+  console.log('Vencendo e recentes provaram janela de dias, exclusao de pagas, mistura de tipo e isolamento por usuario')
 } finally {
   await pool.query('delete from idempotencias where user_id = any($1::uuid[])', [
     [usuarioA.id, usuarioB.id],

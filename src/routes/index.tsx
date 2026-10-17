@@ -1,10 +1,10 @@
+import { useEffect } from 'react'
 import { createRoute } from '@tanstack/react-router'
 
+import { CardContasVencendo } from '@/components/card-contas-vencendo'
+import { CardUltimosLancamentos } from '@/components/card-ultimos-lancamentos'
 import { Header } from '@/components/header'
 import { EstadoCarregandoInicio, EstadoErro } from '@/components/estado-dados'
-import { FiltrosLancamentos } from '@/components/filtros-lancamentos'
-import { ListaLancamentos } from '@/components/lista-lancamentos'
-import { RegistrarFab } from '@/components/registrar-fab'
 import { SaldoAcumuladoBar } from '@/components/saldo-acumulado-bar'
 import { SaldoCard } from '@/components/saldo-card'
 import { useSaldoAcumulado } from '@/hooks/use-saldo-acumulado'
@@ -27,14 +27,10 @@ export function TelaPrincipal() {
     carregando: carregandoLancamentos,
     erro: erroLancamentos,
     recarregar: recarregarLancamentos,
-    filtros,
-    definirFiltros,
-    temMaisReceitas,
-    temMaisDespesas,
-    carregandoMais,
-    erroCarregarMais,
-    carregarMaisReceitas,
-    carregarMaisDespesas,
+    contasVencendo,
+    carregarContasVencendo,
+    ultimosLancamentos,
+    carregarUltimosLancamentos,
   } = useLancamentos()
   const {
     caixinhas,
@@ -51,12 +47,17 @@ export function TelaPrincipal() {
   // mantem o conteudo visivel em vez de trocar tudo por blocos pulsantes.
   const semDados = receitas.length === 0 && despesas.length === 0 && caixinhas.length === 0
 
+  useEffect(() => {
+    void carregarContasVencendo()
+    void carregarUltimosLancamentos()
+  }, [carregarContasVencendo, carregarUltimosLancamentos])
+
   async function tentarNovamente() {
     await Promise.all([recarregarLancamentos(), recarregarCaixinhas()])
   }
 
   return (
-    <div className="mx-auto min-h-svh max-w-xl px-4 pb-36">
+    <div className="mx-auto min-h-svh max-w-xl px-4 pb-10">
       <Header />
       {carregando && semDados ? (
         <EstadoCarregandoInicio />
@@ -73,24 +74,9 @@ export function TelaPrincipal() {
           </div>
 
           <div className="mt-6 flex flex-col gap-4">
-            <FiltrosLancamentos
-              mes={filtros.mes}
-              busca={filtros.busca}
-              onChange={definirFiltros}
-            />
-            <ListaLancamentos
-              receitas={receitas}
-              despesas={despesas}
-              temMaisReceitas={temMaisReceitas}
-              temMaisDespesas={temMaisDespesas}
-              carregandoMais={carregandoMais}
-              erroCarregarMais={erroCarregarMais}
-              onCarregarMaisReceitas={() => void carregarMaisReceitas()}
-              onCarregarMaisDespesas={() => void carregarMaisDespesas()}
-            />
+            <CardContasVencendo itens={contasVencendo} />
+            <CardUltimosLancamentos itens={ultimosLancamentos} />
           </div>
-
-          <RegistrarFab />
         </>
       )}
     </div>

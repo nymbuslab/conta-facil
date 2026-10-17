@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { and, asc, desc, eq, gte, ilike, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, ilike, isNotNull, lt, lte, or, sql, type SQL } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -12,6 +12,7 @@ import {
 import {
   decodificarCursor,
   LIMITE_MAXIMO,
+  LIMITE_PADRAO,
   montarPagina,
   normalizarLimite,
   type Cursor,
@@ -52,6 +53,18 @@ const filtrosLancamentosSchema = z.object({
 const filtrosPaginaSchema = z.object({
   limite: z.coerce.number().int().min(1).max(LIMITE_MAXIMO).optional(),
   cursor: z.string().min(1).optional(),
+})
+
+const DIAS_VENCENDO_PADRAO = 3
+const LIMITE_VENCENDO_PADRAO = 3
+
+const filtrosVencendoSchema = z.object({
+  dias: z.coerce.number().int().min(1).max(90).optional(),
+  limite: z.coerce.number().int().min(1).max(LIMITE_MAXIMO).optional(),
+})
+
+const filtrosRecentesSchema = z.object({
+  limite: z.coerce.number().int().min(1).max(LIMITE_MAXIMO).optional(),
 })
 
 export interface FiltrosLancamentos {
@@ -130,12 +143,23 @@ export function paraLancamentoListado(
   }
 }
 
+export interface FiltrosVencendo {
+  dias: number
+  limite: number
+}
+
+export interface FiltrosRecentes {
+  limite: number
+}
+
 export type RepositorioLancamentos = {
   listar: (userId: string, filtros: FiltrosLancamentos) => Promise<Pagina<LancamentoListado>>
   resumo: (userId: string, mes?: string) => Promise<ResumoLancamentos>
   listarParcelamentos: (userId: string, filtros: FiltrosPagina) => Promise<Pagina<GrupoParcelamentoBanco>>
   criarMuitos: (dados: NovoLancamentoBanco[], banco?: unknown) => Promise<LancamentoBanco[]>
   marcarComoPaga: (userId: string, id: string) => Promise<LancamentoBanco | null>
+  listarVencendo: (userId: string, filtros: FiltrosVencendo) => Promise<{ itens: LancamentoListado[] }>
+  listarRecentes: (userId: string, filtros: FiltrosRecentes) => Promise<{ itens: LancamentoListado[] }>
 }
 
 const repositorioPadrao: RepositorioLancamentos = {
@@ -230,6 +254,44 @@ const repositorioPadrao: RepositorioLancamentos = {
       .returning()
     return atualizado ?? null
   },
+  async listarVencendo(userId, filtros) {
+    const hoje = new Date()
+    const limiteData = new Date(hoje)
+    limiteData.setDate(limiteData.getDate() + filtros.dias)
+    const linhas = await obterBanco()
+      .select(colunasLancamentoListado)
+      .from(lancamentos)
+      .where(
+        and(
+          eq(lancamentos.userId, userId),
+          eq(lancamentos.tipo, 'despesa'),
+          eq(lancamentos.paga, false),
+          gte(lancamentos.vencimento, dataIso(hoje)),
+          lte(lancamentos.vencimento, dataIso(limiteData)),
+        ),
+      )
+      .orderBy(asc(lancamentos.vencimento))
+      .limit(filtros.limite)
+    return { itens: linhas.map(paraLancamentoListado) }
+  },
+  async listarRecentes(userId, filtros) {
+    const linhas = await obterBanco()
+      .select(colunasLancamentoListado)
+      .from(lancamentos)
+      .where(eq(lancamentos.userId, userId))
+      .orderBy(desc(lancamentos.criadoEm), desc(lancamentos.id))
+      .limit(filtros.limite)
+    return { itens: linhas.map(paraLancamentoListado) }
+  },
+}
+
+/** Data "AAAA-MM-DD" (fuso local) de um Date — usado para comparar com a coluna `vencimento`,
+ * que e armazenada como data pura, sem hora. */
+function dataIso(data: Date) {
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
 }
 
 /** Primeiro e último dia (exclusivo) do mês "AAAA-MM", em datas "AAAA-MM-DD". */
@@ -382,6 +444,27 @@ export function criarRotasLancamentos(
       cursor: cursor ?? undefined,
     })
     return contexto.json({ itens: pagina.itens, proximoCursor: pagina.proximoCursor })
+  })
+
+  app.get('/vencendo', async (contexto) => {
+    const resultado = filtrosVencendoSchema.safeParse(contexto.req.query())
+    if (!resultado.success) return contexto.json({ erro: 'Parâmetros inválidos' }, 400)
+
+    const resposta = await repositorio.listarVencendo(contexto.get('userId'), {
+      dias: resultado.data.dias ?? DIAS_VENCENDO_PADRAO,
+      limite: resultado.data.limite ?? LIMITE_VENCENDO_PADRAO,
+    })
+    return contexto.json({ itens: resposta.itens })
+  })
+
+  app.get('/recentes', async (contexto) => {
+    const resultado = filtrosRecentesSchema.safeParse(contexto.req.query())
+    if (!resultado.success) return contexto.json({ erro: 'Parâmetros inválidos' }, 400)
+
+    const resposta = await repositorio.listarRecentes(contexto.get('userId'), {
+      limite: resultado.data.limite ?? LIMITE_PADRAO,
+    })
+    return contexto.json({ itens: resposta.itens })
   })
 
   app.post('/', async (contexto) => {

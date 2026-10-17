@@ -4,13 +4,17 @@ import { describe, expect, it } from 'vitest'
 import { renderRoute } from '@/test/render-route'
 
 describe('BottomNav montado no root', () => {
-  it('aparece na rota /perfil tambem, nao so na /', async () => {
-    const { getByText } = renderRoute('/perfil')
+  it('aparece na rota /perfil tambem, nao so na /, e nao mostra Perfil no nav', async () => {
+    const { getByText, queryByText } = renderRoute('/perfil')
     await waitFor(() => {
       expect(getByText('Perfil', { selector: 'h1' })).toBeInTheDocument()
       expect(getByText('Início')).toBeInTheDocument()
+      expect(getByText('Extrato')).toBeInTheDocument()
       expect(getByText('Parcelas')).toBeInTheDocument()
+      expect(getByText('Caixinhas')).toBeInTheDocument()
+      expect(getByText('Mais')).toBeInTheDocument()
     })
+    expect(queryByText('Perfil', { selector: 'a' })).not.toBeInTheDocument()
   })
 
   it('clicar no item Parcelas navega para a rota /parcelas', async () => {

@@ -28,7 +28,9 @@ export function EstadoCarregando() {
   )
 }
 
-/** Inicio: barra de sobra prevista + tres cards + linhas das tabelas. */
+/** Dashboard do Inicio: barra de sobra prevista + tres cards + os dois cards de conteudo
+ * novos (Contas vencendo, Ultimos lancamentos) — sem linha de tabela, que migrou para o
+ * Extrato junto com o registro de lancamento. */
 export function EstadoCarregandoInicio() {
   return (
     <MolduraCarregando>
@@ -38,11 +40,9 @@ export function EstadoCarregandoInicio() {
         <Bloco className="h-16" />
         <Bloco className="h-16" />
       </div>
-      <div className="space-y-2 pt-3">
-        <Bloco className="h-4 w-24" />
-        <Bloco className="h-12" />
-        <Bloco className="h-12" />
-        <Bloco className="h-12" />
+      <div className="space-y-4 pt-3">
+        <Bloco className="h-24" />
+        <Bloco className="h-32" />
       </div>
     </MolduraCarregando>
   )
@@ -64,6 +64,29 @@ export function EstadoCarregandoParcelas() {
     <MolduraCarregando>
       <Bloco className="h-28" />
       <Bloco className="h-28" />
+    </MolduraCarregando>
+  )
+}
+
+/** Extrato: navegador de mes + busca + abas + linhas de tabela. */
+export function EstadoCarregandoExtrato() {
+  return (
+    <MolduraCarregando>
+      <div className="flex items-center justify-between gap-2">
+        <Bloco className="h-8 w-8" />
+        <Bloco className="h-5 w-32" />
+        <Bloco className="h-8 w-8" />
+      </div>
+      <Bloco className="h-10" />
+      <div className="flex gap-2">
+        <Bloco className="h-8 w-20" />
+        <Bloco className="h-8 w-20" />
+      </div>
+      <div className="space-y-2 pt-1">
+        <Bloco className="h-12" />
+        <Bloco className="h-12" />
+        <Bloco className="h-12" />
+      </div>
     </MolduraCarregando>
   )
 }

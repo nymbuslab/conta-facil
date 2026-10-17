@@ -17,6 +17,8 @@ function criarRepositorio(): RepositorioLancamentos {
     listar: vi.fn().mockResolvedValue({ itens: [], proximoCursor: null }),
     resumo: vi.fn().mockResolvedValue({ receitas: 0, despesas: 0 }),
     listarParcelamentos: vi.fn().mockResolvedValue({ itens: [], proximoCursor: null }),
+    listarVencendo: vi.fn().mockResolvedValue({ itens: [] }),
+    listarRecentes: vi.fn().mockResolvedValue({ itens: [] }),
     criarMuitos: vi.fn(async (dados: NovoLancamentoBanco[]): Promise<LancamentoBanco[]> =>
       dados.map((item, indice) => ({
         ...item,
@@ -130,6 +132,49 @@ describe('rotas de lancamentos', () => {
 
     expect(resposta.status).toBe(400)
     expect(repositorio.resumo).not.toHaveBeenCalled()
+  })
+
+  it('lista as contas vencendo repassando dias e limite ao repositório', async () => {
+    const itens = [{ id: 'd1', tipo: 'despesa', descricao: 'Luz', valor: 100 }]
+    vi.mocked(repositorio.listarVencendo).mockResolvedValue({ itens: itens as never })
+
+    const resposta = await criarApp(repositorio).request('/lancamentos/vencendo?dias=3&limite=3')
+
+    expect(resposta.status).toBe(200)
+    expect(await resposta.json()).toEqual({ itens })
+    expect(repositorio.listarVencendo).toHaveBeenCalledWith('usuario-1', { dias: 3, limite: 3 })
+  })
+
+  it('usa dias e limite padrao quando omitidos em /lancamentos/vencendo', async () => {
+    const resposta = await criarApp(repositorio).request('/lancamentos/vencendo')
+
+    expect(resposta.status).toBe(200)
+    expect(repositorio.listarVencendo).toHaveBeenCalledWith('usuario-1', { dias: 3, limite: 3 })
+  })
+
+  it('recusa dias nao numerico em /lancamentos/vencendo sem consultar o repositorio', async () => {
+    const resposta = await criarApp(repositorio).request('/lancamentos/vencendo?dias=abc')
+
+    expect(resposta.status).toBe(400)
+    expect(repositorio.listarVencendo).not.toHaveBeenCalled()
+  })
+
+  it('lista os ultimos lancamentos repassando o limite ao repositorio', async () => {
+    const itens = [{ id: 'l1', tipo: 'receita', descricao: 'Salario', valor: 500000 }]
+    vi.mocked(repositorio.listarRecentes).mockResolvedValue({ itens: itens as never })
+
+    const resposta = await criarApp(repositorio).request('/lancamentos/recentes?limite=5')
+
+    expect(resposta.status).toBe(200)
+    expect(await resposta.json()).toEqual({ itens })
+    expect(repositorio.listarRecentes).toHaveBeenCalledWith('usuario-1', { limite: 5 })
+  })
+
+  it('recusa limite acima do maximo em /lancamentos/recentes sem consultar o repositorio', async () => {
+    const resposta = await criarApp(repositorio).request('/lancamentos/recentes?limite=1000')
+
+    expect(resposta.status).toBe(400)
+    expect(repositorio.listarRecentes).not.toHaveBeenCalled()
   })
 
   it('lista os parcelamentos agrupados com cursor', async () => {

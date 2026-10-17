@@ -162,4 +162,78 @@ describe('LancamentosProvider', () => {
 
     expect(result.current.erro).toBeNull()
   })
+
+  it('carregarContasVencendo preenche contasVencendo a partir de /lancamentos/vencendo', async () => {
+    const despesaVencendo = {
+      id: 'despesa-1', tipo: 'despesa', descricao: 'Luz', valor: 12000,
+      dataEmissao: null, vencimento: '2026-10-19', paga: false,
+      parcelamentoId: null, parcelaAtual: null, totalParcelas: null,
+    }
+    const get = vi.fn(async (caminho: string) => {
+      if (caminho.startsWith('/lancamentos/vencendo')) return { itens: [despesaVencendo] }
+      if (caminho.startsWith('/lancamentos/resumo')) return { receitas: 0, despesas: 0 }
+      return envelope()
+    })
+    const { result } = montar(criarCliente({ get }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+
+    await act(async () => result.current.carregarContasVencendo())
+
+    expect(result.current.contasVencendo).toHaveLength(1)
+    expect(result.current.contasVencendo[0]).toMatchObject({ descricao: 'Luz', valor: 120 })
+    expect(get).toHaveBeenCalledWith(expect.stringContaining('/lancamentos/vencendo'))
+  })
+
+  it('carregarContasVencendo expoe erro via mensagemErroApi em falha', async () => {
+    const get = vi.fn(async (caminho: string) => {
+      if (caminho.startsWith('/lancamentos/vencendo')) throw new Error('Function indisponivel')
+      if (caminho.startsWith('/lancamentos/resumo')) return { receitas: 0, despesas: 0 }
+      return envelope()
+    })
+    const { result } = montar(criarCliente({ get }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+
+    await act(async () => result.current.carregarContasVencendo())
+
+    expect(result.current.erroContasVencendo).toBe('Function indisponivel')
+  })
+
+  it('carregarUltimosLancamentos preenche ultimosLancamentos misturando tipo', async () => {
+    const receita = {
+      id: 'receita-2', tipo: 'receita', descricao: 'Salario', valor: 500000,
+      dataEmissao: '2026-10-17', vencimento: null, paga: false,
+      parcelamentoId: null, parcelaAtual: null, totalParcelas: null,
+    }
+    const despesa = {
+      id: 'despesa-2', tipo: 'despesa', descricao: 'Internet', valor: 9000,
+      dataEmissao: null, vencimento: '2026-10-20', paga: false,
+      parcelamentoId: null, parcelaAtual: null, totalParcelas: null,
+    }
+    const get = vi.fn(async (caminho: string) => {
+      if (caminho.startsWith('/lancamentos/recentes')) return { itens: [receita, despesa] }
+      if (caminho.startsWith('/lancamentos/resumo')) return { receitas: 0, despesas: 0 }
+      return envelope()
+    })
+    const { result } = montar(criarCliente({ get }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+
+    await act(async () => result.current.carregarUltimosLancamentos())
+
+    expect(result.current.ultimosLancamentos).toHaveLength(2)
+    expect(result.current.ultimosLancamentos.map((item) => item.tipo)).toEqual(['receita', 'despesa'])
+  })
+
+  it('carregarUltimosLancamentos expoe erro via mensagemErroApi em falha', async () => {
+    const get = vi.fn(async (caminho: string) => {
+      if (caminho.startsWith('/lancamentos/recentes')) throw new Error('Function indisponivel')
+      if (caminho.startsWith('/lancamentos/resumo')) return { receitas: 0, despesas: 0 }
+      return envelope()
+    })
+    const { result } = montar(criarCliente({ get }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+
+    await act(async () => result.current.carregarUltimosLancamentos())
+
+    expect(result.current.erroUltimosLancamentos).toBe('Function indisponivel')
+  })
 })

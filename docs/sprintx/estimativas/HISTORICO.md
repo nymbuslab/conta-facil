@@ -974,13 +974,255 @@ entradas:
     real: 0.5
     desvio: null
     registrado_em: 2026-10-15
+  - trabalho_id: dashboard-extrato
+    task_id: T-01.01
+    tipo_task: teste
+    area: mock de GET /lancamentos/vencendo
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.2
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-01.02
+    tipo_task: teste
+    area: mock de GET /lancamentos/recentes
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.15
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-01.03
+    tipo_task: infra
+    area: scaffold de rota nova
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.1
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-02.01
+    tipo_task: persistencia
+    area: repositorio listarVencendo
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-02.02
+    tipo_task: api
+    area: rota GET /lancamentos/vencendo
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-02.03
+    tipo_task: persistencia
+    area: repositorio listarRecentes
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.25
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-02.04
+    tipo_task: api
+    area: rota GET /lancamentos/recentes
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.25
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-02.05
+    tipo_task: teste
+    area: integracao real de vencendo na branch test
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-02.06
+    tipo_task: teste
+    area: integracao real de recentes na branch test
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-03.01
+    tipo_task: ui
+    area: primitivo Sheet sobre radix-dialog
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-03.02
+    tipo_task: ui
+    area: componente MenuMais
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-03.03
+    tipo_task: ui
+    area: BottomNav com 5 itens
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.35
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-03.04
+    tipo_task: teste
+    area: ajuste de teste de navegacao em perfil
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.15
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-04.01
+    tipo_task: dominio
+    area: contexto ganha contasVencendo
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-04.02
+    tipo_task: dominio
+    area: contexto ganha ultimosLancamentos
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.25
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-04.03
+    tipo_task: ui
+    area: card ContasVencendo
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-04.04
+    tipo_task: ui
+    area: card UltimosLancamentos
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.25
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-04.05
+    tipo_task: ui
+    area: index.tsx reescrito como dashboard
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.6
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-04.06
+    tipo_task: ui
+    area: skeleton do dashboard
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.15
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-05.01
+    tipo_task: ui
+    area: ExtratoLista com abas
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.45
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-05.02
+    tipo_task: ui
+    area: extrato.tsx completo
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.5
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: dashboard-extrato
+    task_id: T-05.03
+    tipo_task: ui
+    area: skeleton do Extrato
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.2
+    desvio: null
+    registrado_em: 2026-10-17
 calibracao:
   - tipo_task: infra
-    entradas: 16
+    entradas: 17
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: teste
-    entradas: 12
+    entradas: 17
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: refatoracao
@@ -988,11 +1230,11 @@ calibracao:
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: dominio
-    entradas: 14
+    entradas: 16
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: ui
-    entradas: 15
+    entradas: 25
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: documentacao
@@ -1008,11 +1250,11 @@ calibracao:
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: persistencia
-    entradas: 2
+    entradas: 4
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: api
-    entradas: 5
+    entradas: 7
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: client

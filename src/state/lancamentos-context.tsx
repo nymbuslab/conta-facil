@@ -71,6 +71,14 @@ interface LancamentosContextValue {
   versaoParcelamentos: number
   carregarParcelamentos: () => Promise<void>
   carregarMaisParcelamentos: () => Promise<void>
+  contasVencendo: Despesa[]
+  carregandoContasVencendo: boolean
+  erroContasVencendo: string | null
+  carregarContasVencendo: () => Promise<void>
+  ultimosLancamentos: Lancamento[]
+  carregandoUltimosLancamentos: boolean
+  erroUltimosLancamentos: string | null
+  carregarUltimosLancamentos: () => Promise<void>
 }
 
 type LancamentoApi = {
@@ -180,6 +188,12 @@ export function LancamentosProvider({
   const [cursorParcelamentos, setCursorParcelamentos] = useState<string | null>(null)
   const [carregandoMaisParcelamentos, setCarregandoMaisParcelamentos] = useState(false)
   const [versaoParcelamentos, setVersaoParcelamentos] = useState(0)
+  const [contasVencendo, setContasVencendo] = useState<Despesa[]>([])
+  const [carregandoContasVencendo, setCarregandoContasVencendo] = useState(false)
+  const [erroContasVencendo, setErroContasVencendo] = useState<string | null>(null)
+  const [ultimosLancamentos, setUltimosLancamentos] = useState<Lancamento[]>([])
+  const [carregandoUltimosLancamentos, setCarregandoUltimosLancamentos] = useState(false)
+  const [erroUltimosLancamentos, setErroUltimosLancamentos] = useState<string | null>(null)
 
   /** Descarta respostas de uma sessao/usuario/filtro que ja nao e o atual: sem isso, uma
    * resposta atrasada poderia sobrescrever os dados vigentes (troca de conta ou de filtro). */
@@ -454,6 +468,32 @@ export function LancamentosProvider({
     }
   }, [clienteAtual])
 
+  const carregarContasVencendo = useCallback(async () => {
+    setCarregandoContasVencendo(true)
+    setErroContasVencendo(null)
+    try {
+      const resposta = await clienteAtual.get<{ itens: LancamentoApi[] }>('/lancamentos/vencendo')
+      setContasVencendo(resposta.itens.map(paraLancamento).filter(ehDespesa))
+    } catch (falha) {
+      setErroContasVencendo(mensagemErroApi(falha, 'Não foi possível carregar as contas vencendo'))
+    } finally {
+      setCarregandoContasVencendo(false)
+    }
+  }, [clienteAtual])
+
+  const carregarUltimosLancamentos = useCallback(async () => {
+    setCarregandoUltimosLancamentos(true)
+    setErroUltimosLancamentos(null)
+    try {
+      const resposta = await clienteAtual.get<{ itens: LancamentoApi[] }>('/lancamentos/recentes')
+      setUltimosLancamentos(resposta.itens.map(paraLancamento))
+    } catch (falha) {
+      setErroUltimosLancamentos(mensagemErroApi(falha, 'Não foi possível carregar os últimos lançamentos'))
+    } finally {
+      setCarregandoUltimosLancamentos(false)
+    }
+  }, [clienteAtual])
+
   return (
     <LancamentosContext.Provider value={{
       receitas,
@@ -482,6 +522,14 @@ export function LancamentosProvider({
       versaoParcelamentos,
       carregarParcelamentos,
       carregarMaisParcelamentos,
+      contasVencendo,
+      carregandoContasVencendo,
+      erroContasVencendo,
+      carregarContasVencendo,
+      ultimosLancamentos,
+      carregandoUltimosLancamentos,
+      erroUltimosLancamentos,
+      carregarUltimosLancamentos,
     }}>
       {children}
     </LancamentosContext.Provider>

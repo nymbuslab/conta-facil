@@ -147,10 +147,39 @@ export function criarClienteLancamentosTeste(
     return paginar(ordenados, parametros(caminho).get('cursor'))
   }
 
+  const vencendo = (caminho: string) => {
+    const query = parametros(caminho)
+    const dias = Number(query.get('dias') ?? 3)
+    const limite = Number(query.get('limite') ?? 3)
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    const limiteData = new Date(hoje)
+    limiteData.setDate(limiteData.getDate() + dias)
+
+    const itens = estado.dados
+      .filter((item) => item.tipo === 'despesa' && !item.paga && item.vencimento)
+      .filter((item) => {
+        const venc = new Date(String(item.vencimento))
+        return venc >= hoje && venc <= limiteData
+      })
+      .sort((a, b) => String(a.vencimento).localeCompare(String(b.vencimento)))
+      .slice(0, limite)
+
+    return { itens: structuredClone(itens) }
+  }
+
+  const recentes = (caminho: string) => {
+    const limite = Number(parametros(caminho).get('limite') ?? 5)
+    const itens = [...estado.dados].reverse().slice(0, limite)
+    return { itens: structuredClone(itens) }
+  }
+
   return {
     get: async (caminho: string) => {
       if (caminho.startsWith('/lancamentos/resumo')) return resumo(caminho)
       if (caminho.startsWith('/lancamentos/parcelamentos')) return listarParcelamentos(caminho)
+      if (caminho.startsWith('/lancamentos/vencendo')) return vencendo(caminho)
+      if (caminho.startsWith('/lancamentos/recentes')) return recentes(caminho)
       return listar(caminho)
     },
     post: criarLancamentos,
