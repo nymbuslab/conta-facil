@@ -1,7 +1,9 @@
 # Conta Fácil
 
-App de controle financeiro pessoal (protótipo em evolução para produto real). Mobile-first, tela
-Início mostra o mês selecionado (navegável), caixinhas (poupança por objetivo) e parcelamentos.
+App de controle financeiro pessoal (protótipo em evolução para produto real). Mobile-first: a tela
+Início é um dashboard do mês (resumo, contas vencendo, últimos lançamentos); a tela Extrato
+concentra o registro e a consulta de lançamentos (busca, navegação de mês, abas Receita/Despesas);
+caixinhas (poupança por objetivo) e parcelamentos continuam em telas próprias.
 
 Repositório: https://github.com/nymbuslab/conta-facil (privado)
 
@@ -35,7 +37,8 @@ npm run manutencao:limpar-usuarios-teste    # remove usuarios @example.test da b
 
 ```
 src/
-  routes/          uma rota por tela: index (Início), caixinhas, parcelas, perfil, __root
+  routes/          uma rota por tela: index (Início, dashboard), extrato (registro e consulta de
+                   lançamentos), caixinhas, parcelas, perfil, __root
   components/       componentes de tela + ui/ (primitivas tipo shadcn)
   state/            auth e contextos remotos de lançamentos e caixinhas
   db/               schema Drizzle de lançamentos, caixinhas (e suas movimentações) e idempotências
@@ -192,6 +195,31 @@ corrido, não entra no filtro de mês.
   (`validateSearch`) e trata link ausente/inválido como mesmo estado de erro. Validado contra o
   Neon Auth real (pedido com e-mail inexistente, link sem token, token inválido); o golden path
   completo com um link real recebido por e-mail foi exercitado e confirmado pelo usuário — 2026-10-17.
+- **Dashboard e Extrato**: a tela Início deixou de registrar lançamento e virou dashboard (resumo
+  do mês + cards "Contas vencendo" e "Últimos lançamentos", via `GET /lancamentos/vencendo` e
+  `GET /lancamentos/recentes`); a tela Extrato assumiu registro e consulta, com busca, navegação de
+  mês e abas Receita/Despesas. Navegação inferior ganhou um quinto item, "Mais" (painel lateral com
+  os destinos principais + Perfil + sair) — Perfil saiu da barra inferior. Sem migration de banco.
+  Decisões e histórico em `docs/sprintx/features/dashboard-extrato/`.
+- **Editar e excluir lançamentos**: clicar numa linha de receita ou despesa (Extrato e Parcelas)
+  abre `AcoesLancamentoDialog` (`src/components/acoes-lancamento-dialog.tsx`), um menu único que
+  substituiu o antigo `ConfirmarPagamentoDialog` (removido) e reúne marcar como paga (quando
+  aplicável), editar e excluir. Parcela de parcelamento pergunta o alcance — só esta ou esta e as
+  futuras não pagas (`gte(lancamentos.parcelaAtual, atual.parcelaAtual)` + `eq(paga, false)`),
+  recomputando `totalParcelas` das parcelas restantes ao excluir. Receita vinculada a um depósito
+  "de fora" em caixinha (`caixinha_movimentacoes.lancamentoId`) é bloqueada com 409 — editar/
+  excluir só pela própria caixinha. `PATCH`/`DELETE /lancamentos/:id` seguem o mesmo padrão de
+  idempotência da criação (`Idempotency-Key` obrigatório). Decisões em
+  `docs/sprintx/features/editar-excluir-lancamentos/`; rotas de backend implementadas e testadas
+  na branch `test`, mas **ainda não implantadas em `production`** — pendente de
+  `npx neon deploy --env .env.local` manual.
+- **CORS de produção aceita `localhost:5173` fixo**: não existe Function local — `npm run dev` fala
+  direto com a Function de `production` ou `test`, conforme o `.env.local`. `vite.config.ts` fixa a
+  porta do Vite (`server.port: 5173, strictPort: true`) para a origem nunca variar, e
+  `FUNCTION_ALLOWED_ORIGINS` de `production` passou a incluir `http://localhost:5173` além do
+  domínio público. Troca deliberada: qualquer coisa rodando em `localhost:5173` nesta máquina passa
+  a poder chamar a API de produção enquanto houver sessão válida no navegador — aceito por ser
+  ambiente de um único desenvolvedor.
 
 ## Env vars
 

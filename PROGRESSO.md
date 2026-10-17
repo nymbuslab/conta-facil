@@ -8,6 +8,16 @@ _(nada no momento)_
 
 ## 📋 Próximos Passos
 
+- [ ] (P0) Validar dashboard-extrato em produção com dados reais: golden path visual (desktop +
+  mobile) da tela Início (dashboard) e da tela Extrato (busca, abas, navegação de mês), logado com
+  conta real — está no ar desde hoje sem essa validação (risco residual D-18 do `FECHAMENTO.md` da
+  feature, achado numa varredura de documentação, não desta tarefa)
+- [ ] (P0) Implantar em `production` as rotas `PATCH`/`DELETE /lancamentos/:id` (editar/excluir
+  lançamento): `npx neon deploy --env .env.local` — sem isso, o frontend chamaria rotas 404 em
+  produção quando a UI do diálogo de ações for publicada
+- [ ] (P1) Validar visualmente `AcoesLancamentoDialog` em navegador real (desktop + mobile): menu,
+  edição, exclusão com alcance e os dois avisos (despesa paga, caixinha vinculada) — pulado duas
+  vezes nesta sessão por timeout da ferramenta de automação
 - [ ] (P2) Decidir sobre dark mode: os tokens completos já existem em `src/index.css` (bloco
   `.dark`), mas nada na aplicação aplica essa classe hoje — ou implementar um alternador de tema,
   ou remover o bloco morto. Decisão de produto, adiada nesta sessão a pedido do usuário.
@@ -287,3 +297,29 @@ _(nada no momento)_
   fechar e reabrir a aba — 2026-10-17
 - [x] Golden path completo de redefinição de senha confirmado em produção com link real recebido
   por e-mail: usuário trocou a senha com sucesso — 2026-10-17
+
+- [x] Dev local voltou a carregar dados reais de produção: causa raiz era CORS — a Function de
+  `production` só liberava `contafacil.nymbuslab.com.br`, e `npm run dev` fala direto com ela (não
+  existe Function local). Porta do Vite fixada (`server.port: 5173, strictPort: true` em
+  `vite.config.ts`) para a origem nunca variar; `FUNCTION_ALLOWED_ORIGINS` de `production` passou a
+  incluir também `http://localhost:5173`, publicado com `npx neon deploy --env .env.local`. Build e
+  394/397 testes verdes (1 falha pré-existente do pentest, sem relação) — 2026-10-17 (UI não
+  revalidada nesta rodada)
+
+- [x] Achado durante a varredura de documentação: o `neon deploy` acima publicou em produção TODO o
+  código atual da Function — inclusive os dois endpoints novos da feature dashboard-extrato
+  (`GET /lancamentos/vencendo`, `GET /lancamentos/recentes`), que `FECHAMENTO.md` da feature listava
+  como pendentes de "deploy manual da Function". O frontend dessa mesma feature já estava publicado
+  (push em `master` já sincronizado com `origin/master`). Ou seja, a partir de hoje a feature
+  dashboard-extrato está inteira no ar (frontend + backend) — mas a validação visual e a validação
+  com dados reais que o risco residual do `FECHAMENTO.md` (D-18) pedia continuam pendentes — 2026-10-17
+
+- [x] Editar e excluir lançamentos (receita e despesa) direto do diálogo de ações do Extrato e de
+  Parcelas: `AcoesLancamentoDialog` substitui o antigo `ConfirmarPagamentoDialog`, com escolha de
+  alcance em parcelamento (só esta parcela ou esta e as futuras) e aviso quando a despesa já foi
+  paga. Receita vinculada a um depósito "de fora" em caixinha é bloqueada ao editar/excluir (409).
+  `PATCH`/`DELETE /lancamentos/:id` seguem o mesmo padrão de idempotência da criação. Build e 426
+  testes verdes (35 novos; 1 falha pré-existente do pentest, sem relação). Decisões em
+  `docs/sprintx/features/editar-excluir-lancamentos/` — 2026-10-17 (rotas de backend testadas na
+  branch `test`; ainda não implantadas em `production`; UI não validada em navegador real por
+  timeout repetido da ferramenta)

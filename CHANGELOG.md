@@ -2,6 +2,13 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-17 — Editar e excluir lançamentos
+
+- Receitas e despesas agora podem ser editadas e excluídas direto da lista (Extrato e Parcelas).
+- Parcela de um parcelamento pergunta se a mudança é só dela ou também das parcelas futuras.
+- Receita vinda de um depósito de caixinha "de fora" não pode ser editada ou excluída por aqui —
+  o aviso explica para fazer isso pela própria caixinha.
+
 ## 2026-10-17 — Tela de carregamento e telas de entrada mais polidas
 
 - A tela que aparece ao abrir o app agora mostra a cor e o nome do Conta Fácil, em vez de uma

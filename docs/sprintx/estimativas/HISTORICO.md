@@ -3,7 +3,7 @@ expx_schema: 1
 expx_tool: sprintx
 kind: estimativa_historico
 trabalho_id: null
-atualizado_em: 2026-10-14
+atualizado_em: 2026-10-17
 unidade: h
 entradas:
   - trabalho_id: navegacao-inferior
@@ -1216,13 +1216,211 @@ entradas:
     real: 0.2
     desvio: null
     registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-01.01
+    tipo_task: teste
+    area: mock de editar/excluir e bloqueio de caixinha no cliente de teste
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.5
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-01.02
+    tipo_task: teste
+    area: fake RepositorioLancamentos ganha editar/excluir
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-02.01
+    tipo_task: persistencia
+    area: buscarPorId e estaVinculadoACaixinha no repositorio
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 1.2
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-02.02
+    tipo_task: dominio
+    area: schema zod de edicao de lancamento (alcance)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-02.03
+    tipo_task: persistencia
+    area: repositorio.editar (somente/futuras)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.6
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-02.04
+    tipo_task: api
+    area: rota PATCH /lancamentos/:id (idempotencia, bloqueio caixinha)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.5
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-02.05
+    tipo_task: persistencia
+    area: repositorio.excluir (somente/futuras, corrige totalParcelas)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.6
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-02.06
+    tipo_task: api
+    area: rota DELETE /lancamentos/:id (idempotencia, bloqueio caixinha)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.4
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-03.01
+    tipo_task: dominio
+    area: contexto ganha editarReceita/editarDespesa/excluirLancamento
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.6
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-03.02
+    tipo_task: ui
+    area: AcoesLancamentoDialog (menu, editar, excluir, alcance, erro de caixinha)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 1.0
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-03.03
+    tipo_task: ui
+    area: formulario de edicao pre-preenchido (incluido em T-03.02)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-03.04
+    tipo_task: ui
+    area: confirmacao destrutiva de exclusao (incluido em T-03.02)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-03.05
+    tipo_task: ui
+    area: pergunta de alcance de parcelamento (incluido em T-03.02)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-03.06
+    tipo_task: ui
+    area: erro de vinculo com caixinha no dialogo (incluido em T-03.02)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-04.01
+    tipo_task: ui
+    area: ExtratoLista/ListaLancamentos abrem o dialogo tambem para receita
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 1.5
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-04.02
+    tipo_task: ui
+    area: despesa ja paga tambem abre o dialogo (incluido em T-04.01)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-04.03
+    tipo_task: teste
+    area: tela Parcelas reflete edicao/exclusao de parcela
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.8
+    desvio: null
+    registrado_em: 2026-10-17
+  - trabalho_id: editar-excluir-lancamentos
+    task_id: T-05.01
+    tipo_task: ui
+    area: aviso de despesa ja paga no dialogo (convergencia C-01)
+    sinais: []
+    estimado_min: null
+    estimado_max: null
+    estimado_media: null
+    real: 0.3
+    desvio: null
+    registrado_em: 2026-10-17
 calibracao:
   - tipo_task: infra
     entradas: 17
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: teste
-    entradas: 17
+    entradas: 15
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: refatoracao
@@ -1230,11 +1428,11 @@ calibracao:
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: dominio
-    entradas: 16
+    entradas: 18
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: ui
-    entradas: 25
+    entradas: 33
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: documentacao
@@ -1250,11 +1448,11 @@ calibracao:
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: persistencia
-    entradas: 4
+    entradas: 7
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: api
-    entradas: 7
+    entradas: 9
     desvio_medio: 0
     fator_ativo: false
   - tipo_task: client
@@ -1404,6 +1602,36 @@ Esta feature não passou pela F3.5 (estimativa) — o usuário não pediu. `esti
 
 **Total:** 88 tasks, 44,0 h de esforço real registrado.
 
+## Entradas — editar-excluir-lancamentos (F6, sem F3.5)
+
+Feature executada direto da F5 (auditoria, veredito SIM) para a F6, sem estimativa prévia. 17
+tasks das 4 sprints concluíram verdes, mais 1 task de uma rodada de convergência (sprint-05)
+que corrigiu um achado MÉDIA (C-01: D-02 sem o texto de aviso de despesa já paga) encontrado
+pelo `auditor-convergencia`; a rodada 2 confirmou `convergido`. T-03.03 a T-03.06 e T-04.02
+foram implementadas junto com a task anterior no mesmo arquivo (mesma sessão de trabalho), por
+isso `real: 0` nelas — o esforço está somado na task que as precede, para não contar a mesma
+hora duas vezes no total.
+
+| Trabalho | Task | Tipo | Área | Real |
+|---|---|---|---|---|
+| editar-excluir-lancamentos | T-01.01 | teste | mock de editar/excluir e bloqueio de caixinha no cliente de teste | 0,5 h |
+| editar-excluir-lancamentos | T-01.02 | teste | fake RepositorioLancamentos ganha editar/excluir | 0,3 h |
+| editar-excluir-lancamentos | T-02.01 | persistencia | buscarPorId e estaVinculadoACaixinha no repositório | 1,2 h |
+| editar-excluir-lancamentos | T-02.02 | dominio | schema zod de edição de lançamento (alcance) | 0,4 h |
+| editar-excluir-lancamentos | T-02.03 | persistencia | repositorio.editar (somente/futuras) | 0,6 h |
+| editar-excluir-lancamentos | T-02.04 | api | rota PATCH /lancamentos/:id (idempotência, bloqueio caixinha) | 0,5 h |
+| editar-excluir-lancamentos | T-02.05 | persistencia | repositorio.excluir (somente/futuras, corrige totalParcelas) | 0,6 h |
+| editar-excluir-lancamentos | T-02.06 | api | rota DELETE /lancamentos/:id (idempotência, bloqueio caixinha) | 0,4 h |
+| editar-excluir-lancamentos | T-03.01 | dominio | contexto ganha editarReceita/editarDespesa/excluirLancamento | 0,6 h |
+| editar-excluir-lancamentos | T-03.02 | ui | AcoesLancamentoDialog (menu, editar, excluir, alcance, erro de caixinha) | 1,0 h |
+| editar-excluir-lancamentos | T-03.03 a T-03.06 | ui | formulário, exclusão destrutiva, alcance, erro de caixinha (incluídas em T-03.02) | 0 h |
+| editar-excluir-lancamentos | T-04.01 | ui | ExtratoLista/ListaLancamentos abrem o diálogo também para receita | 1,5 h |
+| editar-excluir-lancamentos | T-04.02 | ui | despesa já paga também abre o diálogo (incluída em T-04.01) | 0 h |
+| editar-excluir-lancamentos | T-04.03 | teste | tela Parcelas reflete edição/exclusão de parcela | 0,8 h |
+| editar-excluir-lancamentos | T-05.01 | ui | aviso de despesa já paga no diálogo (convergência C-01) | 0,3 h |
+
+**Total:** 18 tasks, 8,7 h de esforço real registrado.
+
 ## Calibração por tipo de task
 
 Sem nenhuma estimativa (F3.5) registrada em nenhum trabalho ainda, `desvio_medio` não é
@@ -1414,13 +1642,13 @@ só para contar quantas tasks de cada tipo já têm `real` registrado. `fator_at
 | Tipo de task | Entradas | Desvio médio | Fator ativo? |
 |---|---|---|---|
 | infra | 16 | não calculável (sem estimativa) | não |
-| teste | 12 | não calculável (sem estimativa) | não |
+| teste | 15 | não calculável (sem estimativa) | não |
 | refatoracao | 3 | não calculável (sem estimativa) | não |
-| dominio | 14 | não calculável (sem estimativa) | não |
-| persistencia | 2 | não calculável (sem estimativa) | não |
-| api | 5 | não calculável (sem estimativa) | não |
+| dominio | 16 | não calculável (sem estimativa) | não |
+| persistencia | 5 | não calculável (sem estimativa) | não |
+| api | 7 | não calculável (sem estimativa) | não |
 | client | 2 | não calculável (sem estimativa) | não |
-| ui | 15 | não calculável (sem estimativa) | não |
+| ui | 23 | não calculável (sem estimativa) | não |
 | documentacao | 6 | não calculável (sem estimativa) | não |
 | integracao_externa | 12 | não calculável (sem estimativa) | não |
 | config | 1 | não calculável (sem estimativa) | não |

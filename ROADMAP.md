@@ -14,9 +14,11 @@ publicado no Cloudflare Pages em `https://contafacil.nymbuslab.com.br` com deplo
 partir do push em `master`, golden path validado de ponta a ponta. A idempotência financeira
 (lançamentos, depósito e resgate) também está implantada em `production` desde 2026-10-13.
 
-As listas (Início e Caixinhas) são paginadas por cursor com filtro de mês e busca no servidor, e a
-tela Início permite navegar entre os meses; os totais e os parcelamentos vêm de endpoints
-agregados.
+As listas (Extrato e Caixinhas) são paginadas por cursor com filtro de mês e busca no servidor, e a
+tela Extrato permite navegar entre os meses; os totais e os parcelamentos vêm de endpoints
+agregados. A tela Início é um dashboard do mês (resumo, contas vencendo, últimos lançamentos).
+Receita e despesa podem ser editadas e excluídas direto do diálogo de ações, no Extrato e em
+Parcelas.
 
 Depósitos em caixinha têm origem rastreada desde 2026-10-16 (saldo atual ou dinheiro de fora),
 com lançamento de receita vinculado quando o dinheiro é de fora.
