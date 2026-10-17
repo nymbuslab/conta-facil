@@ -35,6 +35,8 @@ export function criarClienteAuthTeste(usuario: UsuarioTeste | null = usuarioTest
     signUp: { email: async () => ({ data: {}, error: null }) },
     signOut: async () => ({ data: {}, error: null }),
     token: async () => ({ data: { token: 'token-teste' } }),
+    requestPasswordReset: async () => ({ data: {}, error: null }),
+    resetPassword: async () => ({ data: {}, error: null }),
   }
 }
 
@@ -52,6 +54,8 @@ export function criarClienteAuthErro(refetch: () => unknown = () => {}): Cliente
     signUp: { email: async () => ({ data: {}, error: null }) },
     signOut: async () => ({ data: {}, error: null }),
     token: async () => null,
+    requestPasswordReset: async () => ({ data: {}, error: null }),
+    resetPassword: async () => ({ data: {}, error: null }),
   }
 }
 
