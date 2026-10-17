@@ -184,6 +184,14 @@ corrido, não entra no filtro de mês.
   login real (conta de teste do pentest) em Preview antes do rollout para `production` em
   2026-10-17. Decisões, achados e ordem de rollout em
   `docs/sprintx/features/proxy-reverso-neon-auth/` e em `DEPLOY.md`.
+- **Esqueci minha senha**: `requestPasswordReset`/`resetPassword` do Better Auth (Neon Managed
+  Auth), sem servidor de e-mail próprio — o Managed Auth já envia o link de reset pelo SMTP
+  compartilhado deles. Duas telas (`src/routes/esqueci-senha.tsx`,
+  `src/routes/redefinir-senha.tsx`); a de solicitação sempre mostra a mesma mensagem de sucesso,
+  para não revelar se o e-mail existe. `redefinir-senha` lê o `token` da query string
+  (`validateSearch`) e trata link ausente/inválido como mesmo estado de erro. Validado contra o
+  Neon Auth real (pedido com e-mail inexistente, link sem token, token inválido); o golden path
+  completo com um link real recebido por e-mail ainda não foi exercitado — 2026-10-17.
 
 ## Env vars
 
@@ -270,6 +278,8 @@ neon-object-storage, etc.) — consultar antes de mexer em schema, auth ou stora
 
 ## Design
 
-Stitch `designSystem`: `assets/4836740709574892088` (Conta Fácil), no projeto
-`3883790966281062616`. Reusar em toda tela nova. Os tokens reais de `src/index.css` prevalecem:
+Sistema de design documentado em `DESIGN.md` (tokens, componentes, regras nomeadas) e contexto de
+produto em `PRODUCT.md`, gerados a partir do código real — consultar antes de qualquer tela ou
+componente novo. Stitch `designSystem`: `assets/4836740709574892088` (Conta Fácil), no projeto
+`3883790966281062616`, reusado em toda tela nova. Os tokens reais de `src/index.css` prevalecem:
 cores HSL, azul primário sólido e `--radius: 0.25rem`.

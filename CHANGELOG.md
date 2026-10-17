@@ -2,6 +2,18 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-17 — Tela de carregamento e telas de entrada mais polidas
+
+- A tela que aparece ao abrir o app agora mostra a cor e o nome do Conta Fácil, em vez de uma
+  tela branca genérica.
+- Ao criar conta, o requisito de senha (mínimo de 8 caracteres) aparece antes de você errar, não
+  só depois.
+
+## 2026-10-17 — Esqueci minha senha
+
+- Tela de login ganhou o link "Esqueci minha senha", com fluxo completo de recuperação de senha
+  por e-mail.
+
 ## 2026-10-17 — Sessão mais estável no login
 
 - Corrigido: em alguns navegadores (Brave, e com frequência no celular) era preciso fazer login
