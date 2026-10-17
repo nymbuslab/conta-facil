@@ -1,94 +1,12 @@
 import { useMemo, useState } from 'react'
-import type { ColumnDef } from '@tanstack/react-table'
 
 import { BotaoCarregarMais } from '@/components/botao-carregar-mais'
 import { ConfirmarPagamentoDialog } from '@/components/confirmar-pagamento-dialog'
 import { DataTable } from '@/components/data-table'
 import { mensagemErroApi } from '@/lib/api-client'
-import { estaVencida } from '@/lib/datas'
-import { formatarData, formatarMoeda } from '@/lib/formatters'
-import { cn } from '@/lib/utils'
+import { colunasReceita, criarColunasDespesa } from '@/lib/colunas-lancamento'
 import { useLancamentos } from '@/state/lancamentos-context'
 import type { Despesa, Receita } from '@/types/lancamento'
-
-const colunasReceita: ColumnDef<Receita, unknown>[] = [
-  {
-    accessorKey: 'descricao',
-    header: 'Descrição',
-    cell: ({ row }) => (
-      <div className="max-w-[9rem] sm:max-w-xs">
-        <p className="truncate">{row.original.descricao}</p>
-        <p className="text-xs text-muted-foreground">
-          Dt Entrada {formatarData(row.original.dataEmissao)}
-        </p>
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'valor',
-    header: 'Valor',
-    cell: ({ getValue }) => (
-      <span className="whitespace-nowrap font-display font-medium text-success">
-        {formatarMoeda(getValue<number>())}
-      </span>
-    ),
-  },
-]
-
-function criarColunasDespesa(aoSelecionarPendente: (despesa: Despesa) => void): ColumnDef<Despesa, unknown>[] {
-  return [
-    {
-      accessorKey: 'descricao',
-      header: 'Descrição',
-      cell: ({ row }) => (
-        <div className="max-w-[9rem] sm:max-w-xs">
-          <p className="truncate">{row.original.descricao}</p>
-          <p className="text-xs text-muted-foreground">
-            Venc. {formatarData(row.original.vencimento)}
-          </p>
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'valor',
-      header: 'Valor',
-      cell: ({ getValue }) => (
-        <span className="whitespace-nowrap font-display font-medium text-destructive">
-          {formatarMoeda(getValue<number>())}
-        </span>
-      ),
-    },
-    {
-      accessorKey: 'paga',
-      header: 'Status',
-      cell: ({ getValue, row }) => {
-        if (getValue<boolean>()) {
-          return <span className="text-xs font-medium text-success">Pago</span>
-        }
-
-        const vencida = estaVencida(row.original.vencimento)
-        const rotulo = vencida ? 'Vencido' : 'A vencer'
-
-        return (
-          <button
-            type="button"
-            className={cn(
-              'rounded-sm text-xs font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-              vencida ? 'text-destructive' : 'text-foreground',
-            )}
-            aria-label={`${rotulo}, marcar "${row.original.descricao}" como paga`}
-            onClick={(evento) => {
-              evento.stopPropagation()
-              aoSelecionarPendente(row.original)
-            }}
-          >
-            {rotulo}
-          </button>
-        )
-      },
-    },
-  ]
-}
 
 interface ListaLancamentosProps {
   receitas: Receita[]
