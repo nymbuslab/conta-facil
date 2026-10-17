@@ -12,13 +12,13 @@ function Harness() {
 }
 
 describe('ListaLancamentos — marcar despesa como paga', () => {
-  it('clicar numa linha de despesa abre o dialogo de confirmacao com a descricao', async () => {
+  it('clicar numa linha de despesa abre o menu de acoes com a descricao', async () => {
     renderWithProviders(<Harness />)
 
     fireEvent.click(await screen.findByText('Aluguel e condomínio'))
 
     await waitFor(() => {
-      expect(screen.getByText('Deseja marcar como paga?')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Marcar como paga' })).toBeInTheDocument()
       expect(screen.getAllByText('Aluguel e condomínio').length).toBeGreaterThan(1)
     })
   })
@@ -27,12 +27,12 @@ describe('ListaLancamentos — marcar despesa como paga', () => {
     renderWithProviders(<Harness />)
 
     fireEvent.click(await screen.findByText('Internet fibra'))
-    await waitFor(() => expect(screen.getByText('Deseja marcar como paga?')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Marcar como paga' })).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
 
     await waitFor(() => {
-      expect(screen.queryByText('Deseja marcar como paga?')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Marcar como paga' })).not.toBeInTheDocument()
     })
   })
 
@@ -40,8 +40,10 @@ describe('ListaLancamentos — marcar despesa como paga', () => {
     renderWithProviders(<Harness />)
 
     fireEvent.click(await screen.findByText('Fatura cartão de crédito'))
-    await waitFor(() => expect(screen.getByText('Deseja marcar como paga?')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Marcar como paga' })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Marcar como paga' }))
 
+    await waitFor(() => expect(screen.getByText('Deseja marcar como paga?')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Marcar como paga' }))
 
     await waitFor(() => {

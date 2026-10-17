@@ -36,15 +36,17 @@ describe('acessibilidade — nomes acessiveis e teclado', () => {
     expect(onExcluir).toHaveBeenCalledTimes(1)
   })
 
-  it('anuncia a acao de pagar no status e abre a confirmacao por teclado', async () => {
+  it('anuncia a acao de abrir o lancamento e chega na confirmacao de pagamento por teclado', async () => {
     const user = userEvent.setup()
     renderWithProviders(<HarnessLancamentos />)
 
-    const botoes = await screen.findAllByRole('button', { name: /marcar ".+" como paga/ })
-    const botaoStatus = botoes[0]
-    botaoStatus.focus()
-    expect(botaoStatus).toHaveFocus()
+    const linhaDespesa = await screen.findByRole('row', { name: /Abrir ações de "Aluguel e condomínio"/ })
+    linhaDespesa.focus()
+    expect(linhaDespesa).toHaveFocus()
 
+    await user.keyboard('{Enter}')
+    const botaoPagar = await screen.findByRole('button', { name: 'Marcar como paga' })
+    botaoPagar.focus()
     await user.keyboard('{Enter}')
 
     await waitFor(() => {

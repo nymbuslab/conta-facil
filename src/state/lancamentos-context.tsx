@@ -31,6 +31,7 @@ interface PaginaApi<T> {
 interface ResumoApi {
   receitas: number
   despesas: number
+  despesasPagas: number
 }
 
 interface GrupoParcelamentoApi {
@@ -47,6 +48,7 @@ interface LancamentosContextValue {
   despesas: Despesa[]
   saldoReceita: number
   saldoDespesa: number
+  totalPago: number
   carregando: boolean
   erro: string | null
   filtros: FiltrosLancamentos
@@ -61,6 +63,9 @@ interface LancamentosContextValue {
   adicionarReceita: (dados: ReceitaFormValues) => Promise<void>
   adicionarDespesa: (dados: DespesaFormValues) => Promise<void>
   marcarComoPaga: (id: string) => Promise<void>
+  editarReceita: (id: string, dados: ReceitaFormValues) => Promise<void>
+  editarDespesa: (id: string, dados: DespesaFormValues & { alcance?: 'somente' | 'futuras' }) => Promise<void>
+  excluirLancamento: (id: string, tipo: 'receita' | 'despesa', alcance?: 'somente' | 'futuras') => Promise<void>
   parcelamentos: GrupoParcelamento[]
   carregandoParcelamentos: boolean
   erroParcelamentos: string | null
@@ -89,6 +94,7 @@ type LancamentoApi = {
   dataEmissao: string | null
   vencimento: string | null
   paga: boolean
+  pagoEm: string | null
   parcelamentoId: string | null
   parcelaAtual: number | null
   totalParcelas: number | null
@@ -120,6 +126,7 @@ function paraLancamento(item: LancamentoApi): Lancamento {
     valor: item.valor / 100,
     vencimento: item.vencimento ?? '',
     paga: item.paga,
+    pagoEm: item.pagoEm,
     parcelamentoId: item.parcelamentoId,
     parcelaAtual: item.parcelaAtual,
     totalParcelas: item.totalParcelas,
@@ -175,7 +182,7 @@ export function LancamentosProvider({
 
   const [receitas, setReceitas] = useState<Receita[]>([])
   const [despesas, setDespesas] = useState<Despesa[]>([])
-  const [resumo, setResumo] = useState<ResumoApi>({ receitas: 0, despesas: 0 })
+  const [resumo, setResumo] = useState<ResumoApi>({ receitas: 0, despesas: 0, despesasPagas: 0 })
   const [cursors, setCursors] = useState<Cursors>({ receita: null, despesa: null })
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
@@ -223,7 +230,7 @@ export function LancamentosProvider({
       if (limpar) {
         setReceitas([])
         setDespesas([])
-        setResumo({ receitas: 0, despesas: 0 })
+        setResumo({ receitas: 0, despesas: 0, despesasPagas: 0 })
         cursorsRef.current = { receita: null, despesa: null }
         setCursors(cursorsRef.current)
       }
@@ -288,7 +295,7 @@ export function LancamentosProvider({
       geracaoAtualRef.current += 1
       setReceitas([])
       setDespesas([])
-      setResumo({ receitas: 0, despesas: 0 })
+      setResumo({ receitas: 0, despesas: 0, despesasPagas: 0 })
       cursorsRef.current = { receita: null, despesa: null }
       setCursors(cursorsRef.current)
       setErro(null)
@@ -400,7 +407,10 @@ export function LancamentosProvider({
     // Optimistic: a linha mostra "Pago" na hora. Em falha, volta ao valor anterior e o
     // erro sobe para quem chamou (o dialogo).
     const anterior = despesas.find((item) => item.id === id)
-    setDespesas((atuais) => atuais.map((item) => (item.id === id ? { ...item, paga: true } : item)))
+    const hoje = new Date().toISOString().slice(0, 10)
+    setDespesas((atuais) =>
+      atuais.map((item) => (item.id === id ? { ...item, paga: true, pagoEm: hoje } : item)),
+    )
     try {
       const convertido = paraLancamento(await clienteAtual.patch<LancamentoApi>(`/lancamentos/${id}/pagar`))
       if (ehDespesa(convertido)) {
@@ -413,6 +423,94 @@ export function LancamentosProvider({
       if (anterior) {
         setDespesas((atuais) => atuais.map((item) => (item.id === id ? anterior : item)))
       }
+      throw falha
+    }
+  }
+
+  async function editarReceita(id: string, dados: ReceitaFormValues) {
+    const valor = parseValorMonetario(dados.valor)
+    if (valor === null) return
+    const anterior = receitas.find((item) => item.id === id)
+    if (!anterior) return
+    // Optimistic: a linha reflete os dados novos na hora. Em falha, volta ao valor anterior,
+    // mesmo padrao de marcarComoPaga/excluirCaixinha.
+    setReceitas((atuais) =>
+      atuais.map((item) => (item.id === id ? { ...item, descricao: dados.descricao, valor, dataEmissao: dados.dataEmissao } : item)),
+    )
+    try {
+      await clienteAtual.patchIdempotente(`/lancamentos/${id}`, {
+        tipo: 'receita',
+        descricao: dados.descricao,
+        valor: Math.round(valor * 100),
+        dataEmissao: dados.dataEmissao,
+      })
+      await sincronizarResumo()
+    } catch (falha) {
+      setReceitas((atuais) => atuais.map((item) => (item.id === id ? anterior : item)))
+      throw falha
+    }
+  }
+
+  async function editarDespesa(id: string, dados: DespesaFormValues & { alcance?: 'somente' | 'futuras' }) {
+    const valor = parseValorMonetario(dados.valor)
+    if (valor === null) return
+    const anterior = despesas.find((item) => item.id === id)
+    if (!anterior) return
+    // Optimistic so na linha clicada: com alcance 'futuras' as parcelas irmas so atualizam
+    // quando a resposta do servidor chega, porque o filtro exato (nao pagas, indice >= atual)
+    // e decidido no banco, nao duplicado aqui.
+    setDespesas((atuais) =>
+      atuais.map((item) => (item.id === id ? { ...item, descricao: dados.descricao, valor, vencimento: dados.vencimento } : item)),
+    )
+    try {
+      const resposta = await clienteAtual.patchIdempotente<LancamentoApi[]>(`/lancamentos/${id}`, {
+        tipo: 'despesa',
+        descricao: dados.descricao,
+        valor: Math.round(valor * 100),
+        vencimento: dados.vencimento,
+        alcance: dados.alcance,
+      })
+      const convertidos = resposta.map(paraLancamento).filter(ehDespesa)
+      setDespesas((atuais) =>
+        atuais.map((item) => convertidos.find((convertido) => convertido.id === item.id) ?? item),
+      )
+      if (dados.alcance || anterior.parcelamentoId) invalidarParcelamentos()
+      await sincronizarResumo()
+    } catch (falha) {
+      setDespesas((atuais) => atuais.map((item) => (item.id === id ? anterior : item)))
+      throw falha
+    }
+  }
+
+  async function excluirLancamento(id: string, tipo: 'receita' | 'despesa', alcance?: 'somente' | 'futuras') {
+    // Optimistic: a linha some na hora. Em falha, volta para a lista, mesmo padrao de
+    // excluirCaixinha (src/state/caixinhas-context.tsx).
+    if (tipo === 'receita') {
+      const anterior = receitas.find((item) => item.id === id)
+      if (!anterior) return
+      setReceitas((atuais) => atuais.filter((item) => item.id !== id))
+      try {
+        const query = alcance === 'futuras' ? '?alcance=futuras' : ''
+        await clienteAtual.deleteIdempotente(`/lancamentos/${id}${query}`)
+        await sincronizarResumo()
+      } catch (falha) {
+        setReceitas((atuais) => (atuais.some((item) => item.id === id) ? atuais : [...atuais, anterior]))
+        throw falha
+      }
+      return
+    }
+
+    const anterior = despesas.find((item) => item.id === id)
+    if (!anterior) return
+    setDespesas((atuais) => atuais.filter((item) => item.id !== id))
+    try {
+      const query = alcance === 'futuras' ? '?alcance=futuras' : ''
+      const resposta = await clienteAtual.deleteIdempotente<{ idsExcluidos: string[] }>(`/lancamentos/${id}${query}`)
+      setDespesas((atuais) => atuais.filter((item) => !resposta.idsExcluidos.includes(item.id)))
+      invalidarParcelamentos()
+      await sincronizarResumo()
+    } catch (falha) {
+      setDespesas((atuais) => (atuais.some((item) => item.id === id) ? atuais : [...atuais, anterior]))
       throw falha
     }
   }
@@ -500,6 +598,7 @@ export function LancamentosProvider({
       despesas,
       saldoReceita: arredondar(resumo.receitas / 100),
       saldoDespesa: arredondar(resumo.despesas / 100),
+      totalPago: arredondar((resumo.despesasPagas ?? 0) / 100),
       carregando,
       erro,
       filtros,
@@ -514,6 +613,9 @@ export function LancamentosProvider({
       adicionarReceita,
       adicionarDespesa,
       marcarComoPaga,
+      editarReceita,
+      editarDespesa,
+      excluirLancamento,
       parcelamentos,
       carregandoParcelamentos,
       erroParcelamentos,

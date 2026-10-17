@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { AcoesLancamentoDialog } from '@/components/acoes-lancamento-dialog'
 import { BotaoCarregarMais } from '@/components/botao-carregar-mais'
-import { ConfirmarPagamentoDialog } from '@/components/confirmar-pagamento-dialog'
 import { DataTable } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
-import { mensagemErroApi } from '@/lib/api-client'
-import { colunasReceita, criarColunasDespesa } from '@/lib/colunas-lancamento'
-import { useLancamentos } from '@/state/lancamentos-context'
-import type { Despesa, Receita } from '@/types/lancamento'
+import { colunasDespesa, colunasReceita, rotuloLinhaLancamento } from '@/lib/colunas-lancamento'
+import type { Despesa, Lancamento, Receita } from '@/types/lancamento'
 
 interface ExtratoListaProps {
   receitas: Receita[]
@@ -34,12 +32,8 @@ export function ExtratoLista({
   onCarregarMaisReceitas,
   onCarregarMaisDespesas,
 }: ExtratoListaProps) {
-  const { marcarComoPaga } = useLancamentos()
   const [aba, setAba] = useState<'receita' | 'despesa'>(abaInicial)
-  const [despesaSelecionada, setDespesaSelecionada] = useState<Despesa | null>(null)
-  const [erroPagamento, setErroPagamento] = useState<string | null>(null)
-  const [processando, setProcessando] = useState(false)
-  const colunasDespesa = useMemo(() => criarColunasDespesa(setDespesaSelecionada), [])
+  const [lancamentoSelecionado, setLancamentoSelecionado] = useState<Lancamento | null>(null)
 
   // Resincroniza se abaInicial mudar sem a tela remontar: hoje as duas entradas (os cards do
   // dashboard) sempre remontam o componente, mas useState(abaInicial) sozinho ignoraria uma
@@ -48,22 +42,9 @@ export function ExtratoLista({
     setAba(abaInicial)
   }, [abaInicial])
 
-  async function confirmarPagamento(id: string) {
-    setErroPagamento(null)
-    setProcessando(true)
-    try {
-      await marcarComoPaga(id)
-      setDespesaSelecionada(null)
-    } catch (falha) {
-      setErroPagamento(mensagemErroApi(falha, 'Não foi possível marcar como paga'))
-    } finally {
-      setProcessando(false)
-    }
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2" role="tablist" aria-label="Receita ou Despesas">
+      <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="Receita ou Despesas">
         <Button
           type="button"
           variant={aba === 'receita' ? 'secondary' : 'ghost'}
@@ -72,6 +53,7 @@ export function ExtratoLista({
           role="tab"
           aria-selected={aba === 'receita'}
           aria-controls="painel-receita"
+          className="w-full"
           onClick={() => setAba('receita')}
         >
           Receita
@@ -84,6 +66,7 @@ export function ExtratoLista({
           role="tab"
           aria-selected={aba === 'despesa'}
           aria-controls="painel-despesa"
+          className="w-full"
           onClick={() => setAba('despesa')}
         >
           Despesas
@@ -97,6 +80,8 @@ export function ExtratoLista({
             data={receitas}
             ariaLabel="Receitas do mês"
             mensagemVazio="Nenhuma receita lançada ainda."
+            onRowClick={setLancamentoSelecionado}
+            rotuloLinha={rotuloLinhaLancamento}
           />
           {temMaisReceitas && (
             <BotaoCarregarMais
@@ -112,8 +97,8 @@ export function ExtratoLista({
             data={despesas}
             ariaLabel="Despesas do mês"
             mensagemVazio="Nenhuma despesa lançada ainda."
-            onRowClick={setDespesaSelecionada}
-            linhaDesabilitada={(despesa) => despesa.paga}
+            onRowClick={setLancamentoSelecionado}
+            rotuloLinha={rotuloLinhaLancamento}
           />
           {temMaisDespesas && (
             <BotaoCarregarMais
@@ -130,15 +115,9 @@ export function ExtratoLista({
         </p>
       )}
 
-      <ConfirmarPagamentoDialog
-        despesa={despesaSelecionada}
-        erro={erroPagamento}
-        processando={processando}
-        onCancelar={() => {
-          setDespesaSelecionada(null)
-          setErroPagamento(null)
-        }}
-        onConfirmar={confirmarPagamento}
+      <AcoesLancamentoDialog
+        lancamento={lancamentoSelecionado}
+        onOpenChange={(open) => !open && setLancamentoSelecionado(null)}
       />
     </div>
   )

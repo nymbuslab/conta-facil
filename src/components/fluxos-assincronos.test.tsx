@@ -126,14 +126,15 @@ describe('fluxos assincronos — optimistic com rollback', () => {
     renderWithProviders(<HarnessLancamentos />, { clienteLancamentos: cliente })
 
     fireEvent.click(
-      await screen.findByRole('button', { name: /marcar "Fatura cartão de crédito" como paga/ }),
+      await screen.findByRole('row', { name: /Abrir ações de "Fatura cartão de crédito"/ }),
     )
+    fireEvent.click(await screen.findByRole('button', { name: 'Marcar como paga' }))
 
     await screen.findByText('Deseja marcar como paga?')
     fireEvent.click(screen.getByRole('button', { name: 'Marcar como paga' }))
 
-    // A lista reflete "Pago" antes da resposta da Function; o dialogo mostra o progresso.
-    expect(await screen.findByText('Pago')).toBeInTheDocument()
+    // A lista reflete "Pago em ..." antes da resposta da Function; o dialogo mostra o progresso.
+    expect(await screen.findByText(/^Pago em/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Marcando...' })).toBeDisabled()
 
     await act(async () => {
@@ -141,12 +142,14 @@ describe('fluxos assincronos — optimistic com rollback', () => {
     })
 
     expect(await screen.findByText('Falha ao pagar')).toBeInTheDocument()
-    expect(screen.queryByText('Pago')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Pago em/)).not.toBeInTheDocument()
 
-    // Fecha o dialogo: a despesa voltou a ficar pendente na lista.
+    // Cancelar na tela de pagamento volta pro menu; cancelar de novo fecha o dialogo. A
+    // despesa volta a ficar pendente na lista.
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }))
     expect(
-      await screen.findByRole('button', { name: /marcar "Fatura cartão de crédito" como paga/ }),
+      await screen.findByRole('row', { name: /Abrir ações de "Fatura cartão de crédito"/ }),
     ).toBeInTheDocument()
   })
 

@@ -1,12 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
+import { AcoesLancamentoDialog } from '@/components/acoes-lancamento-dialog'
 import { BotaoCarregarMais } from '@/components/botao-carregar-mais'
-import { ConfirmarPagamentoDialog } from '@/components/confirmar-pagamento-dialog'
 import { DataTable } from '@/components/data-table'
-import { mensagemErroApi } from '@/lib/api-client'
-import { colunasReceita, criarColunasDespesa } from '@/lib/colunas-lancamento'
-import { useLancamentos } from '@/state/lancamentos-context'
-import type { Despesa, Receita } from '@/types/lancamento'
+import { colunasDespesa, colunasReceita, rotuloLinhaLancamento } from '@/lib/colunas-lancamento'
+import type { Despesa, Lancamento, Receita } from '@/types/lancamento'
 
 interface ListaLancamentosProps {
   receitas: Receita[]
@@ -29,24 +27,7 @@ export function ListaLancamentos({
   onCarregarMaisReceitas,
   onCarregarMaisDespesas,
 }: ListaLancamentosProps) {
-  const { marcarComoPaga } = useLancamentos()
-  const [despesaSelecionada, setDespesaSelecionada] = useState<Despesa | null>(null)
-  const [erroPagamento, setErroPagamento] = useState<string | null>(null)
-  const [processando, setProcessando] = useState(false)
-  const colunasDespesa = useMemo(() => criarColunasDespesa(setDespesaSelecionada), [])
-
-  async function confirmarPagamento(id: string) {
-    setErroPagamento(null)
-    setProcessando(true)
-    try {
-      await marcarComoPaga(id)
-      setDespesaSelecionada(null)
-    } catch (falha) {
-      setErroPagamento(mensagemErroApi(falha, 'Não foi possível marcar como paga'))
-    } finally {
-      setProcessando(false)
-    }
-  }
+  const [lancamentoSelecionado, setLancamentoSelecionado] = useState<Lancamento | null>(null)
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,6 +38,8 @@ export function ListaLancamentos({
           data={receitas}
           ariaLabel="Receitas do mês"
           mensagemVazio="Nenhuma receita lançada ainda."
+          onRowClick={setLancamentoSelecionado}
+          rotuloLinha={rotuloLinhaLancamento}
         />
         {temMaisReceitas && (
           <BotaoCarregarMais
@@ -73,8 +56,8 @@ export function ListaLancamentos({
           data={despesas}
           ariaLabel="Despesas do mês"
           mensagemVazio="Nenhuma despesa lançada ainda."
-          onRowClick={setDespesaSelecionada}
-          linhaDesabilitada={(despesa) => despesa.paga}
+          onRowClick={setLancamentoSelecionado}
+          rotuloLinha={rotuloLinhaLancamento}
         />
         {temMaisDespesas && (
           <BotaoCarregarMais
@@ -90,15 +73,9 @@ export function ListaLancamentos({
         </p>
       )}
 
-      <ConfirmarPagamentoDialog
-        despesa={despesaSelecionada}
-        erro={erroPagamento}
-        processando={processando}
-        onCancelar={() => {
-          setDespesaSelecionada(null)
-          setErroPagamento(null)
-        }}
-        onConfirmar={confirmarPagamento}
+      <AcoesLancamentoDialog
+        lancamento={lancamentoSelecionado}
+        onOpenChange={(open) => !open && setLancamentoSelecionado(null)}
       />
     </div>
   )

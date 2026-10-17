@@ -17,7 +17,9 @@ function criarCliente(overrides: Record<string, unknown> = {}) {
     post: vi.fn().mockResolvedValue([]),
     postIdempotente: vi.fn().mockResolvedValue([]),
     patch: vi.fn(),
+    patchIdempotente: vi.fn().mockResolvedValue([]),
     delete: vi.fn(),
+    deleteIdempotente: vi.fn().mockResolvedValue({ idsExcluidos: [] }),
     ...overrides,
   } as unknown as ApiClient
 }
@@ -235,5 +237,92 @@ describe('LancamentosProvider', () => {
     await act(async () => result.current.carregarUltimosLancamentos())
 
     expect(result.current.erroUltimosLancamentos).toBe('Function indisponivel')
+  })
+})
+
+describe('LancamentosProvider — editar e excluir (otimista com rollback)', () => {
+  const despesaLuz = {
+    id: 'despesa-1', tipo: 'despesa', descricao: 'Luz', valor: 10000,
+    dataEmissao: null, vencimento: '2026-10-20', paga: false, pagoEm: null,
+    parcelamentoId: null, parcelaAtual: null, totalParcelas: null,
+  }
+
+  it('editarReceita atualiza a lista na hora, confirma com o servidor e reverte em falha', async () => {
+    const get = getPorTipo({ receita: [receitaSalario], resumo: { receitas: 1250.5, despesas: 0 } })
+    const patchIdempotente = vi.fn().mockResolvedValue({})
+    const { result } = montar(criarCliente({ get, patchIdempotente }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+
+    await act(async () => {
+      await result.current.editarReceita('receita-1', { descricao: 'Freelance editado', valor: '2.000,00', dataEmissao: '2026-10-12' })
+    })
+
+    expect(patchIdempotente).toHaveBeenCalledWith('/lancamentos/receita-1', {
+      tipo: 'receita', descricao: 'Freelance editado', valor: 200000, dataEmissao: '2026-10-12',
+    })
+    expect(result.current.receitas[0]).toMatchObject({ descricao: 'Freelance editado', valor: 2000 })
+
+    const falhando = criarCliente({
+      get: getPorTipo({ receita: [receitaSalario] }),
+      patchIdempotente: vi.fn().mockRejectedValue(new Error('Falha ao editar')),
+    })
+    const segunda = montar(falhando)
+    await waitFor(() => expect(segunda.result.current.carregando).toBe(false))
+
+    await expect(act(async () => {
+      await segunda.result.current.editarReceita('receita-1', { descricao: 'Nao vai vingar', valor: '1,00', dataEmissao: '2026-10-12' })
+    })).rejects.toThrow('Falha ao editar')
+    expect(segunda.result.current.receitas[0]).toMatchObject({ descricao: 'Freelance' })
+  })
+
+  it('editarDespesa envia o alcance e atualiza as parcelas devolvidas pelo servidor', async () => {
+    const get = getPorTipo({ despesa: [despesaLuz] })
+    const patchIdempotente = vi.fn().mockResolvedValue([
+      { ...despesaLuz, descricao: 'Luz e água', valor: 15000 },
+    ])
+    const { result } = montar(criarCliente({ get, patchIdempotente }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+
+    await act(async () => {
+      await result.current.editarDespesa('despesa-1', {
+        descricao: 'Luz e água', valor: '150,00', vencimento: '2026-10-20',
+        parcelado: false, quantidadeParcelas: undefined, alcance: 'futuras',
+      })
+    })
+
+    expect(patchIdempotente).toHaveBeenCalledWith('/lancamentos/despesa-1', {
+      tipo: 'despesa', descricao: 'Luz e água', valor: 15000, vencimento: '2026-10-20', alcance: 'futuras',
+    })
+    expect(result.current.despesas[0]).toMatchObject({ descricao: 'Luz e água', valor: 150 })
+  })
+
+  it('excluirLancamento remove a despesa na hora e reverte se a API falhar', async () => {
+    const get = getPorTipo({ despesa: [despesaLuz] })
+    const deleteIdempotente = vi.fn().mockRejectedValue(new Error('Falha ao excluir'))
+    const { result } = montar(criarCliente({ get, deleteIdempotente }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+    expect(result.current.despesas).toHaveLength(1)
+
+    await expect(act(async () => {
+      await result.current.excluirLancamento('despesa-1', 'despesa')
+    })).rejects.toThrow('Falha ao excluir')
+
+    expect(deleteIdempotente).toHaveBeenCalledWith('/lancamentos/despesa-1')
+    expect(result.current.despesas).toHaveLength(1)
+  })
+
+  it('excluirLancamento com alcance futuras remove so os ids que o servidor confirmou', async () => {
+    const despesaIrma = { ...despesaLuz, id: 'despesa-2', descricao: 'Luz', parcelamentoId: 'pc1', parcelaAtual: 2, totalParcelas: 2 }
+    const get = getPorTipo({ despesa: [{ ...despesaLuz, parcelamentoId: 'pc1', parcelaAtual: 1, totalParcelas: 2 }, despesaIrma] })
+    const deleteIdempotente = vi.fn().mockResolvedValue({ idsExcluidos: ['despesa-1', 'despesa-2'] })
+    const { result } = montar(criarCliente({ get, deleteIdempotente }))
+    await waitFor(() => expect(result.current.carregando).toBe(false))
+
+    await act(async () => {
+      await result.current.excluirLancamento('despesa-1', 'despesa', 'futuras')
+    })
+
+    expect(deleteIdempotente).toHaveBeenCalledWith('/lancamentos/despesa-1?alcance=futuras')
+    expect(result.current.despesas).toHaveLength(0)
   })
 })
