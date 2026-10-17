@@ -191,7 +191,7 @@ corrido, não entra no filtro de mês.
   para não revelar se o e-mail existe. `redefinir-senha` lê o `token` da query string
   (`validateSearch`) e trata link ausente/inválido como mesmo estado de erro. Validado contra o
   Neon Auth real (pedido com e-mail inexistente, link sem token, token inválido); o golden path
-  completo com um link real recebido por e-mail ainda não foi exercitado — 2026-10-17.
+  completo com um link real recebido por e-mail foi exercitado e confirmado pelo usuário — 2026-10-17.
 
 ## Env vars
 

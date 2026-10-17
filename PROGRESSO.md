@@ -8,12 +8,6 @@ _(nada no momento)_
 
 ## 📋 Próximos Passos
 
-- [ ] (P1) Confirmar o golden path de login em produção com uma conta real (abrir o app, logar,
-  fechar e reabrir a aba) — validação que não pode ser feita sem usar credenciais reais ou criar
-  dado fictício em produção.
-- [ ] (P2) Confirmar o golden path completo de redefinição de senha em produção com um link real
-  recebido por e-mail (clicar no link, trocar a senha, logar com a senha nova) — não dá para
-  simular sem um e-mail real chegando numa caixa de entrada.
 - [ ] (P2) Decidir sobre dark mode: os tokens completos já existem em `src/index.css` (bloco
   `.dark`), mas nada na aplicação aplica essa classe hoje — ou implementar um alternador de tema,
   ou remover o bloco morto. Decisão de produto, adiada nesta sessão a pedido do usuário.
@@ -29,9 +23,9 @@ _(nada no momento)_
   (8 testes novos, mesmo padrão de `login.test.tsx`/`cadastro.test.tsx`). Build e 356/357 testes
   verdes (a falha é achado pré-existente da rotina de pentest, sem relação com esta mudança).
   Validado ao vivo contra o Neon Auth real: link no login, pedido de recuperação com e-mail
-  inexistente, link sem token, token inválido — 2026-10-17 (ressalva: o golden path completo —
-  clicar num link real recebido por e-mail e efetivamente trocar a senha — não foi exercitado,
-  ver Próximos Passos)
+  inexistente, link sem token, token inválido — 2026-10-17. Golden path completo (link real
+  recebido por e-mail, troca de senha, login com a senha nova) confirmado pelo usuário em
+  2026-10-17
 
 - [x] Proxy reverso `/auth/*` para o Neon Auth (Cloudflare Pages Functions,
   `functions/auth/[[catchall]].js`), resolvendo sessão não persistindo em navegadores que
@@ -42,8 +36,8 @@ _(nada no momento)_
   `VITE_NEON_AUTH_BASE_URL` configuradas no painel do Cloudflare Pages, rebuild feito, app real
   confirmado chamando o proxy — `GET /auth/get-session` 200). Build, lint e 351 testes verdes (5
   novos). Decisões e achados em `docs/sprintx/features/proxy-reverso-neon-auth/` e `DEPLOY.md` —
-  2026-10-17 (ressalva: login completo em produção não validado com credenciais reais — não há
-  conta de teste em produção; confirmação do usuário pendente, ver Próximos Passos)
+  2026-10-17. Login completo em produção com credenciais reais confirmado pelo usuário em
+  2026-10-17: sessão permaneceu logada após fechar e reabrir a aba
 
 - [x] Parcelamento inverte o input: usuário informa o valor da parcela, não o total — a Function
   multiplica pela quantidade (120 × 10 = R$ 1.200,00). Validado em produção via browser real,
@@ -289,3 +283,7 @@ _(nada no momento)_
   minha senha" reposicionado para baixo do campo (convenção mais discreta). Build, lint e detector
   limpos; 356/357 testes verdes (a falha é o mesmo achado pré-existente da rotina de pentest, sem
   relação); validado visualmente no navegador em cada etapa — 2026-10-17
+- [x] Golden path de login em produção confirmado com conta real: sessão permaneceu logada após
+  fechar e reabrir a aba — 2026-10-17
+- [x] Golden path completo de redefinição de senha confirmado em produção com link real recebido
+  por e-mail: usuário trocou a senha com sucesso — 2026-10-17
