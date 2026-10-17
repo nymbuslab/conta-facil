@@ -16,7 +16,7 @@ function renderizar(itens: Despesa[]) {
 }
 
 const despesa = (id: string, descricao: string, vencimento: string): Despesa => ({
-  id, tipo: 'despesa', descricao, valor: 100, vencimento, paga: false,
+  id, tipo: 'despesa', descricao, valor: 100, vencimento, paga: false, pagoEm: null,
   parcelamentoId: null, parcelaAtual: null, totalParcelas: null,
 })
 

@@ -20,7 +20,7 @@ const receita: Lancamento = {
 }
 const despesa: Lancamento = {
   id: 'd1', tipo: 'despesa', descricao: 'Internet', valor: 0.9, vencimento: '2026-10-20',
-  paga: false, parcelamentoId: null, parcelaAtual: null, totalParcelas: null,
+  paga: false, pagoEm: null, parcelamentoId: null, parcelaAtual: null, totalParcelas: null,
 }
 
 describe('CardUltimosLancamentos', () => {

@@ -3,8 +3,9 @@ import { createRoute } from '@tanstack/react-router'
 import { EstadoCarregandoExtrato, EstadoErro } from '@/components/estado-dados'
 import { ExtratoLista } from '@/components/extrato-lista'
 import { FiltrosLancamentos } from '@/components/filtros-lancamentos'
-import { Header } from '@/components/header'
 import { RegistrarFab } from '@/components/registrar-fab'
+import { SaldoCard } from '@/components/saldo-card'
+import { formatarMoeda } from '@/lib/formatters'
 import { useLancamentos } from '@/state/lancamentos-context'
 import { Route as rootRoute } from '@/routes/__root'
 
@@ -26,6 +27,9 @@ export function TelaExtrato() {
   const {
     receitas,
     despesas,
+    saldoReceita,
+    saldoDespesa,
+    totalPago,
     carregando,
     erro,
     recarregar,
@@ -43,14 +47,23 @@ export function TelaExtrato() {
 
   return (
     <div className="mx-auto min-h-svh max-w-xl px-4 pb-36">
-      <Header />
       {carregando && semDados ? (
         <EstadoCarregandoExtrato />
       ) : erro && semDados ? (
         <EstadoErro tentarNovamente={recarregar} />
       ) : (
         <>
-          <div className="mt-2 flex flex-col gap-4">
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            <SaldoCard titulo="Receita" valor={saldoReceita} />
+            <SaldoCard titulo="Despesa" valor={saldoDespesa} />
+            <SaldoCard
+              titulo="Total Pago"
+              valor={totalPago}
+              subtitulo={`Falta ${formatarMoeda(saldoDespesa - totalPago)}`}
+            />
+          </div>
+
+          <div className="mt-6 flex flex-col gap-4">
             <FiltrosLancamentos
               mes={filtros.mes}
               busca={filtros.busca}

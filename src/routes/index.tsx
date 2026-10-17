@@ -5,6 +5,7 @@ import { CardContasVencendo } from '@/components/card-contas-vencendo'
 import { CardUltimosLancamentos } from '@/components/card-ultimos-lancamentos'
 import { Header } from '@/components/header'
 import { EstadoCarregandoInicio, EstadoErro } from '@/components/estado-dados'
+import { RegistrarFab } from '@/components/registrar-fab'
 import { SaldoAcumuladoBar } from '@/components/saldo-acumulado-bar'
 import { SaldoCard } from '@/components/saldo-card'
 import { useSaldoAcumulado } from '@/hooks/use-saldo-acumulado'
@@ -57,7 +58,7 @@ export function TelaPrincipal() {
   }
 
   return (
-    <div className="mx-auto min-h-svh max-w-xl px-4 pb-10">
+    <div className="mx-auto min-h-svh max-w-xl px-4 pb-36">
       <Header />
       {carregando && semDados ? (
         <EstadoCarregandoInicio />
@@ -77,6 +78,8 @@ export function TelaPrincipal() {
             <CardContasVencendo itens={contasVencendo} />
             <CardUltimosLancamentos itens={ultimosLancamentos} />
           </div>
+
+          <RegistrarFab />
         </>
       )}
     </div>

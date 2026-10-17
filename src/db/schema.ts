@@ -27,6 +27,7 @@ export const lancamentos = pgTable(
     dataEmissao: date('data_emissao', { mode: 'string' }),
     vencimento: date({ mode: 'string' }),
     paga: boolean().notNull().default(false),
+    pagoEm: date('pago_em', { mode: 'string' }),
     parcelamentoId: uuid('parcelamento_id'),
     parcelaAtual: integer('parcela_atual'),
     totalParcelas: integer('total_parcelas'),

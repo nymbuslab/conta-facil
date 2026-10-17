@@ -77,6 +77,7 @@ export interface Despesa {
   valor: number
   vencimento: string
   paga: boolean
+  pagoEm: string | null
   parcelamentoId: string | null
   parcelaAtual: number | null
   totalParcelas: number | null

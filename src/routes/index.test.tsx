@@ -101,8 +101,8 @@ describe('TelaPrincipal — card Guardado e saldo com Caixinhas', () => {
 })
 
 describe('TelaPrincipal — dashboard', () => {
-  it('mostra os cards de resumo e os dois cards novos, sem FAB nem busca', async () => {
-    const { getByText, queryByRole, queryByLabelText } = renderDashboard(<TelaPrincipal />)
+  it('mostra os cards de resumo, os dois cards novos, o FAB de registrar, mas sem busca', async () => {
+    const { getByText, getByRole, queryByLabelText } = renderDashboard(<TelaPrincipal />)
 
     await waitFor(() => {
       expect(getByText('Receita')).toBeInTheDocument()
@@ -112,7 +112,7 @@ describe('TelaPrincipal — dashboard', () => {
       expect(getByText('Últimos lançamentos')).toBeInTheDocument()
     })
 
-    expect(queryByRole('button', { name: /Registrar lançamento/i })).not.toBeInTheDocument()
+    expect(getByRole('button', { name: /Registrar lançamento/i })).toBeInTheDocument()
     expect(queryByLabelText('Buscar lançamentos')).not.toBeInTheDocument()
   })
 

@@ -35,6 +35,9 @@ interface DataTableProps<TData> {
   ariaLabel?: string
   onRowClick?: (linha: TData) => void
   linhaDesabilitada?: (linha: TData) => boolean
+  /** Nome acessivel da linha clicavel (ex.: "Vencido, marcar 'Luz' como paga") — sem isso, uma
+   * linha com onRowClick fica focavel mas sem contexto nenhum pra quem usa leitor de tela. */
+  rotuloLinha?: (linha: TData) => string
 }
 
 export function DataTable<TData>({
@@ -44,6 +47,7 @@ export function DataTable<TData>({
   ariaLabel,
   onRowClick,
   linhaDesabilitada,
+  rotuloLinha,
 }: DataTableProps<TData>) {
   const table = useReactTable({
     data,
@@ -102,6 +106,7 @@ export function DataTable<TData>({
                     : undefined
                 }
                 tabIndex={clicavel ? 0 : undefined}
+                aria-label={clicavel ? rotuloLinha?.(row.original) : undefined}
                 className={cn(clicavel && 'cursor-pointer')}
               >
                 {row.getVisibleCells().map((cell) => (

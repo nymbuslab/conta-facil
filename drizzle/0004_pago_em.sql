@@ -1,0 +1,1 @@
+ALTER TABLE "lancamentos" ADD COLUMN "pago_em" date;
