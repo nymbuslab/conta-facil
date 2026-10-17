@@ -20,6 +20,8 @@ function criarClienteAuth() {
     signUp: { email: cadastrar },
     signOut: sair,
     token: obterToken,
+    requestPasswordReset: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    resetPassword: vi.fn().mockResolvedValue({ data: {}, error: null }),
   }
 
   return { cliente, entrar, cadastrar, sair, obterToken }

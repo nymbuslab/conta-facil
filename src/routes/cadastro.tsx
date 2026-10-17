@@ -8,7 +8,15 @@ import { z } from 'zod'
 import { MarcaDestaque } from '@/components/marca-destaque'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/state/auth-context'
 
@@ -57,7 +65,7 @@ export function TelaCadastro() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-4 py-10">
       <MarcaDestaque />
-      <Card className="w-full max-w-sm shadow-md">
+      <Card className="w-full max-w-sm">
         <CardHeader className="space-y-2 text-center">
           <CardTitle className="font-display text-2xl">
             <h1>Crie sua conta</h1>
@@ -126,6 +134,7 @@ export function TelaCadastro() {
                         {mostrarSenha ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                       </Button>
                     </div>
+                    <FormDescription>Mínimo de 8 caracteres.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -11,8 +11,27 @@ _(nada no momento)_
 - [ ] (P1) Confirmar o golden path de login em produção com uma conta real (abrir o app, logar,
   fechar e reabrir a aba) — validação que não pode ser feita sem usar credenciais reais ou criar
   dado fictício em produção.
+- [ ] (P2) Confirmar o golden path completo de redefinição de senha em produção com um link real
+  recebido por e-mail (clicar no link, trocar a senha, logar com a senha nova) — não dá para
+  simular sem um e-mail real chegando numa caixa de entrada.
+- [ ] (P2) Decidir sobre dark mode: os tokens completos já existem em `src/index.css` (bloco
+  `.dark`), mas nada na aplicação aplica essa classe hoje — ou implementar um alternador de tema,
+  ou remover o bloco morto. Decisão de produto, adiada nesta sessão a pedido do usuário.
 
 ## ✅ Concluído
+
+- [x] Fluxo "Esqueci minha senha": link na tela de login, tela de solicitação
+  (`/esqueci-senha`, mensagem genérica de sucesso sem revelar se o e-mail existe) e tela de
+  redefinição (`/redefinir-senha`, lê `token` da URL — estados de link inválido/expirado,
+  formulário de nova senha e confirmação). Usa `requestPasswordReset`/`resetPassword` do Neon
+  Managed Auth (Better Auth), sem servidor de e-mail próprio. `esqueci-senha.test.tsx` e
+  `redefinir-senha.test.tsx` cobrem validação, sucesso, token ausente/inválido e erro do servidor
+  (8 testes novos, mesmo padrão de `login.test.tsx`/`cadastro.test.tsx`). Build e 356/357 testes
+  verdes (a falha é achado pré-existente da rotina de pentest, sem relação com esta mudança).
+  Validado ao vivo contra o Neon Auth real: link no login, pedido de recuperação com e-mail
+  inexistente, link sem token, token inválido — 2026-10-17 (ressalva: o golden path completo —
+  clicar num link real recebido por e-mail e efetivamente trocar a senha — não foi exercitado,
+  ver Próximos Passos)
 
 - [x] Proxy reverso `/auth/*` para o Neon Auth (Cloudflare Pages Functions,
   `functions/auth/[[catchall]].js`), resolvendo sessão não persistindo em navegadores que
@@ -258,3 +277,15 @@ _(nada no momento)_
   `npx neon deploy --branch test`, sem tocar em `production`. `FUNCTION_ALLOWED_ORIGINS` do
   `test` ganhou `http://localhost:5173` em `.env.test.local` para permitir esse tipo de validação
   local no futuro — 2026-10-16
+- [x] Sistema de design documentado e auditado: `PRODUCT.md` e `DESIGN.md` gerados a partir do
+  código real (tokens, componentes, regras nomeadas). Splash screen corrigida: saiu do fundo
+  branco genérico para superfície sólida Azul Confiança com wordmark e barra indeterminada,
+  ganhou tempo mínimo de exibição (~400ms) e passou a reaparecer corretamente num retry de sessão
+  (bug real corrigido, não só melhoria). Auditoria de conformidade visual rodada duas vezes em
+  toda a `src/`: 2 achados reais corrigidos na origem (alvo de toque 40px→44px em
+  `Button size="icon"`, sombra `shadow-md`→`shadow-sm` nos Cards de login/cadastro) e 2 exceções
+  documentadas no `DESIGN.md` (gradiente de scroll do `DataTable`, token `overlay` do `Dialog`).
+  Polimento adicional: hint "Mínimo de 8 caracteres" no campo de senha do cadastro, link "Esqueci
+  minha senha" reposicionado para baixo do campo (convenção mais discreta). Build, lint e detector
+  limpos; 356/357 testes verdes (a falha é o mesmo achado pré-existente da rotina de pentest, sem
+  relação); validado visualmente no navegador em cada etapa — 2026-10-17

@@ -52,6 +52,8 @@ beforeAll(async () => {
     signUp: { email: async () => ({ error: null }) },
     signOut: async () => ({ error: null }),
     token: async () => ({ data: { token: token.token } }),
+    requestPasswordReset: async () => ({ error: null }),
+    resetPassword: async () => ({ error: null }),
   }
 
   await cliente.post('/lancamentos', {

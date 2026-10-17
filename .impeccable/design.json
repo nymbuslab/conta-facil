@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T00:00:00.000Z",
+  "title": "Design System: Conta Fácil",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Azul Confiança",
+        "canonical": "hsl(222, 100%, 55%)",
+        "tonalRamp": ["#00123D", "#002270", "#0034AD", "#0046EB", "#1A5EFF", "#528AFF", "#8FB0FF", "#CCDBFF"]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Verde Confirmado",
+        "canonical": "hsl(175, 77%, 32%)",
+        "tonalRamp": ["#073632", "#0D635C", "#139086", "#1AC7B8", "#38E5D7", "#78EDE4", "#BBF6F1", "#DBFAF8"]
+      },
+      "destructive": {
+        "role": "tertiary",
+        "displayName": "Vermelho Saída",
+        "canonical": "hsl(0, 72%, 51%)",
+        "tonalRamp": ["#350909", "#601010", "#8C1717", "#B81E1E", "#DC2828", "#E45858", "#EC8D8D", "#F6CACA"]
+      },
+      "warning": {
+        "role": "neutral",
+        "displayName": "Índigo-violeta (aviso)",
+        "canonical": "hsl(244, 58%, 51%)",
+        "tonalRamp": ["#0F0D30", "#1E1A61", "#2E2791", "#433ACA", "#6D66D6", "#9B96E3", "#C9C7F0", "#ECEBFA"]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Névoa de Fundo",
+        "canonical": "hsl(214, 30%, 96%)",
+        "tonalRamp": ["#14191F", "#2D3643", "#455468", "#5E718D", "#7E90A9", "#A3B0C2", "#C8CFDA", "#EDEFF3"]
+      },
+      "overlay": {
+        "role": "neutral",
+        "displayName": "Véu de Fundo",
+        "canonical": "rgba(0, 0, 0, 0.8)"
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Valores monetários e wordmark; sempre com algarismos tabulares." },
+      "body": { "displayName": "Body", "purpose": "Texto padrão de interface: rótulo, descrição, botão, navegação." }
+    },
+    "shadows": [
+      { "name": "repouso", "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)", "purpose": "Card parado na tela (shadow-sm)." },
+      { "name": "flutuante", "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", "purpose": "Botão de registrar (FAB) e speed dial (shadow-md)." },
+      { "name": "sobreposicao", "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", "purpose": "Dialog/modal (shadow-lg), única camada que bloqueia o resto da tela." }
+    ],
+    "motion": [
+      { "name": "fade-in", "value": "0.2s ease-out", "purpose": "Transições de entrada padrão (accordion, fade genérico)." },
+      { "name": "speed-dial-in", "value": "0.15s ease-out, opacity 0→1 + translateY(8px)→0 + scale(0.96)→1", "purpose": "Entrada dos botões de atalho do FAB (Receita/Despesa)." },
+      { "name": "splash-fade-out", "value": "0.25s ease-out, opacity 1→0", "purpose": "Saída da tela de splash ao concluir o carregamento da sessão." },
+      { "name": "indeterminate", "value": "1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite, translateX(-100%)→translateX(250%)", "purpose": "Preenchimento da barra de carregamento da splash, enquanto não há percentual real a mostrar." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal — confirmar, registrar, salvar.",
+      "html": "<button class=\"ds-btn-primary\">Confirmar</button>",
+      "css": ".ds-btn-primary { background: #1A5EFF; color: #F2F4F8; height: 40px; padding: 0 16px; border-radius: 2px; border: none; font-family: Inter, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background-color 0.15s; } .ds-btn-primary:hover { background: #306DFE; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #F2F4F8, 0 0 0 4px #1A5EFF; } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ação de apoio — depositar, resgatar, cancelar.",
+      "html": "<button class=\"ds-btn-secondary\">Depositar</button>",
+      "css": ".ds-btn-secondary { background: #E2E7EE; color: #0F1829; height: 40px; padding: 0 16px; border-radius: 2px; border: none; font-family: Inter, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; transition: background-color 0.15s; } .ds-btn-secondary:hover { background: #CBD3DE; } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px #F2F4F8, 0 0 0 4px #1A5EFF; }"
+    },
+    {
+      "name": "Count Badge",
+      "kind": "chip",
+      "refersTo": "badge-default",
+      "description": "Contagem de parcelas pagas sobre o total (ex: 3/10).",
+      "html": "<span class=\"ds-badge\">3/10</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; background: #E2E7EE; color: #0F1829; border-radius: 9999px; padding: 2px 10px; font-family: Inter, system-ui, sans-serif; font-size: 0.75rem; font-weight: 600; }"
+    },
+    {
+      "name": "Value Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Cartão de valor monetário com cor por direção (parcela, caixinha, saldo).",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\"><span class=\"ds-card-label\">Receita</span></div><p class=\"ds-card-value ds-value-success\">R$ 1.200,00</p></div>",
+      "css": ".ds-card { background: #FFFFFF; color: #0F1829; border-radius: 4px; border: 1px solid #C8CFDA; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); padding: 12px; } .ds-card-header { margin-bottom: 6px; } .ds-card-label { font-family: Inter, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; color: #5D6F89; } .ds-card-value { font-family: Geist, Inter, system-ui, sans-serif; font-size: 1.25rem; font-weight: 600; font-feature-settings: 'tnum' on, 'zero' on; margin: 0; } .ds-value-success { color: #139086; } .ds-value-destructive { color: #DC2828; } .ds-value-primary { color: #1A5EFF; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de formulário padrão (valor, descrição, data).",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Descrição\" />",
+      "css": ".ds-input { height: 40px; width: 100%; background: #F2F4F8; color: #0F1829; border: 1px solid #C8CFDA; border-radius: 2px; padding: 0 12px; font-family: Inter, system-ui, sans-serif; font-size: 0.875rem; } .ds-input::placeholder { color: #5D6F89; } .ds-input:focus-visible { outline: none; border-color: #1A5EFF; box-shadow: 0 0 0 2px #F2F4F8, 0 0 0 4px #1A5EFF; } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Progress Bar",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Barra de progresso assinatura: parcela paga, meta de caixinha. Trilho neutro, preenchimento verde fixo.",
+      "html": "<div class=\"ds-progress\"><div class=\"ds-progress-fill\" style=\"width: 62%\"></div></div>",
+      "css": ".ds-progress { height: 8px; width: 100%; background: #E9EDF2; border-radius: 9999px; overflow: hidden; } .ds-progress-fill { height: 100%; background: #139086; border-radius: 9999px; }"
+    },
+    {
+      "name": "Floating Action Button",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Botão circular fixo de registrar lançamento, com speed dial de Receita/Despesa.",
+      "html": "<button class=\"ds-fab\" aria-label=\"Registrar lançamento\"><svg class=\"ds-fab-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/></svg></button>",
+      "css": ".ds-fab { width: 56px; height: 56px; border-radius: 9999px; background: #1A5EFF; color: #F2F4F8; border: none; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); transition: background-color 0.15s; } .ds-fab:hover { background: #306DFE; } .ds-fab-icon { width: 20px; height: 20px; } .ds-fab:focus-visible { outline: none; box-shadow: 0 0 0 2px #F2F4F8, 0 0 0 4px #1A5EFF; }"
+    },
+    {
+      "name": "Splash / Boot Screen",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Primeiro frame do app: superfície cheia em Azul Confiança, ícone + wordmark, barra indeterminada no lugar de spinner genérico.",
+      "html": "<div class=\"ds-splash\"><div class=\"ds-splash-brand\"><img class=\"ds-splash-icon\" src=\"/favicon.svg\" alt=\"\" aria-hidden=\"true\" /><span class=\"ds-splash-word\">Conta Fácil</span></div><div class=\"ds-splash-track\" aria-hidden=\"true\"><div class=\"ds-splash-fill\"></div></div></div>",
+      "css": ".ds-splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; background: #1A5EFF; } .ds-splash-brand { display: flex; flex-direction: column; align-items: center; gap: 12px; } .ds-splash-icon { width: 64px; height: 64px; } .ds-splash-word { font-family: Geist, Inter, system-ui, sans-serif; font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; color: #F2F4F8; } .ds-splash-track { height: 4px; width: 128px; border-radius: 9999px; overflow: hidden; background: rgba(242, 244, 248, 0.25); } .ds-splash-fill { height: 100%; width: 40%; border-radius: 9999px; background: #F2F4F8; animation: ds-splash-indeterminate 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite; } @keyframes ds-splash-indeterminate { from { transform: translateX(-100%); } to { transform: translateX(250%); } }"
+    },
+    {
+      "name": "Bottom Navigation",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Navegação inferior fixa (Início, Parcelas, Caixinhas, Perfil), item ativo em azul.",
+      "html": "<nav class=\"ds-bottom-nav\"><a class=\"ds-bottom-nav-item ds-bottom-nav-item--active\" href=\"#\"><svg class=\"ds-bottom-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 12l9-9 9 9M5 10v10h14V10\"/></svg>Início</a><a class=\"ds-bottom-nav-item\" href=\"#\"><svg class=\"ds-bottom-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"2\"/></svg>Parcelas</a></nav>",
+      "css": ".ds-bottom-nav { display: flex; justify-content: space-around; align-items: stretch; background: #FFFFFF; border-top: 1px solid #C8CFDA; } .ds-bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; font-family: Inter, system-ui, sans-serif; font-size: 0.75rem; color: #5D6F89; text-decoration: none; } .ds-bottom-nav-item--active { color: #1A5EFF; } .ds-bottom-nav-icon { width: 20px; height: 20px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Caderninho Certo",
+    "overview": "Conta Fácil é o caderno de contas que não tenta ser nada além disso: cada número no lugar certo, nada decorativo disputando atenção com o saldo. A interface é precisa e contida — cantos quase retos (4px nas superfícies, 2px em botões e campos), cor sólida sem gradiente, ícones de linha (Lucide) sem emoji, e sombra reservada só para o que realmente flutua sobre a tela (modal, botão de registrar). Números monetários usam a fonte de destaque com algarismos tabulares, para alinhar em coluna e parecer sempre comparável, nunca decorativo.\n\nA identidade rejeita explicitamente o visual de app de finanças gamificado: sem confete, sem emoji, sem tom infantilizado. O objetivo é confiança por precisão, não engajamento por estímulo.",
+    "keyCharacteristics": [
+      "Cor sólida, nunca gradiente.",
+      "Cantos discretos (quase retos), reservando o círculo só para pílulas, progresso e o botão de registrar.",
+      "Sombra como exceção (elemento flutuante), não como regra.",
+      "Cor como sinal de direção do dinheiro, não como decoração.",
+      "Números em algarismos tabulares na fonte de destaque."
+    ],
+    "rules": [
+      { "name": "A Regra do Dinheiro com Sinal", "body": "Toda vez que uma cor representa um valor monetário, ela carrega a direção do dinheiro: Verde Confirmado para entrada ou liquidação, Vermelho Saída para saída, Azul Confiança para o que está guardado. Nunca usar uma cor neutra num valor cuja direção importa para o usuário decidir algo.", "section": "colors" },
+      { "name": "A Regra do Algarismo Tabular", "body": "Todo valor monetário usa a fonte display com 'tnum' on. Nenhum número de dinheiro aparece na fonte de corpo (Inter) sem esse recurso tipográfico.", "section": "typography" },
+      { "name": "A Regra do Plano por Padrão", "body": "Superfícies são planas em repouso. Sombra aparece só como resposta a estar sobre o resto da interface (modal, botão flutuante) — nunca como decoração de hover ou de destaque.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do usar cor sólida sempre, nunca gradiente, em qualquer superfície ou botão — exceto o indicador funcional de rolagem do DataTable.",
+      "Do colorir todo valor monetário pelo sinal: verde para entrada/liquidação, vermelho para saída, azul para o que está guardado.",
+      "Do usar algarismos tabulares ('tnum' on) em qualquer número monetário, na fonte display.",
+      "Do manter o modal com margem lateral fixa no mobile (w-[calc(100%-2rem)]) — nunca encostar nas bordas da tela.",
+      "Do reservar sombra para o que está flutuando sobre a interface (modal, FAB); cards ficam com shadow-sm fixo, sem variação por hover.",
+      "Do usar ícone de linha (Lucide) para qualquer pictograma de interface."
+    ],
+    "donts": [
+      "Don't usar emoji em nenhum texto ou estado da interface.",
+      "Don't usar travessão como conector no texto de UI.",
+      "Don't aumentar a sombra de um card ao passar o mouse — o sistema é plano por padrão.",
+      "Don't usar cor neutra num valor monetário cuja direção importa para a decisão do usuário.",
+      "Don't adicionar gamificação (confete, emblema, tom infantilizado) — anti-referência confirmada do produto."
+    ]
+  }
+}

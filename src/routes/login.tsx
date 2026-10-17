@@ -47,7 +47,7 @@ export function TelaLogin() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-4 py-10">
       <MarcaDestaque />
-      <Card className="w-full max-w-sm shadow-md">
+      <Card className="w-full max-w-sm">
         <CardHeader className="space-y-2 text-center">
           <CardTitle className="font-display text-2xl">
             <h1>Entre na sua conta</h1>
@@ -102,6 +102,11 @@ export function TelaLogin() {
                       >
                         {mostrarSenha ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                       </Button>
+                    </div>
+                    <div className="flex justify-end">
+                      <Link to="/esqueci-senha" className="text-sm text-muted-foreground hover:text-primary hover:underline">
+                        Esqueci minha senha
+                      </Link>
                     </div>
                     <FormMessage />
                   </FormItem>

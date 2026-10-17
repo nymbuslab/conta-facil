@@ -21,6 +21,9 @@ agregados.
 Depósitos em caixinha têm origem rastreada desde 2026-10-16 (saldo atual ou dinheiro de fora),
 com lançamento de receita vinculado quando o dinheiro é de fora.
 
+Recuperação de senha por e-mail está disponível desde 2026-10-17 (link "Esqueci minha senha" no
+login, via Neon Managed Auth).
+
 ## Prioridades
 
 _(nada no momento)_

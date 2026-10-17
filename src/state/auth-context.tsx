@@ -33,6 +33,8 @@ export type ClienteAuth = {
   }
   signOut: () => Promise<ResultadoAuth>
   token: () => Promise<unknown>
+  requestPasswordReset: (dados: { email: string; redirectTo: string }) => Promise<ResultadoAuth>
+  resetPassword: (dados: { newPassword: string; token: string }) => Promise<ResultadoAuth>
 }
 
 type AuthContextValue = {
@@ -43,6 +45,8 @@ type AuthContextValue = {
   sair: () => Promise<void>
   obterToken: () => Promise<string | null>
   recarregarSessao: () => Promise<void>
+  solicitarRedefinicaoSenha: (email: string) => Promise<void>
+  redefinirSenha: (novaSenha: string, token: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -138,9 +142,32 @@ export function AuthProvider({
     await sessao.refetch?.()
   }, [sessao])
 
+  const solicitarRedefinicaoSenha = useCallback(async (email: string) => {
+    verificarErro(
+      await clienteAtual.requestPasswordReset({
+        email,
+        redirectTo: `${window.location.origin}/redefinir-senha`,
+      }),
+    )
+  }, [clienteAtual])
+
+  const redefinirSenha = useCallback(async (novaSenha: string, token: string) => {
+    verificarErro(await clienteAtual.resetPassword({ newPassword: novaSenha, token }))
+  }, [clienteAtual])
+
   return (
     <AuthContext.Provider
-      value={{ status, usuario, entrar, cadastrar, sair, obterToken, recarregarSessao }}
+      value={{
+        status,
+        usuario,
+        entrar,
+        cadastrar,
+        sair,
+        obterToken,
+        recarregarSessao,
+        solicitarRedefinicaoSenha,
+        redefinirSenha,
+      }}
     >
       {children}
     </AuthContext.Provider>
