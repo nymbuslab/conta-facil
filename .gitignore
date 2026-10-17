@@ -43,3 +43,5 @@ docs/eventos/
 
 # Log local da skill task-observer
 skill-observations/
+# indice derivado do memox: reconstruivel, nao versionado
+.expx/memoria/
