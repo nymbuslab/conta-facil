@@ -2,18 +2,23 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-const Table = React.forwardRef<
-  HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
-    <table
-      ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
-      {...props}
-    />
-  </div>
-))
+interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  /** Ref do contêiner com `overflow-auto` (quem de fato rola), para quem precisa medir se a
+   * tabela tem conteúdo fora da tela — o ref padrão do componente aponta para o `<table>`. */
+  containerRef?: React.Ref<HTMLDivElement>
+}
+
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, containerRef, ...props }, ref) => (
+    <div ref={containerRef} className="relative w-full overflow-auto">
+      <table
+        ref={ref}
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props}
+      />
+    </div>
+  )
+)
 Table.displayName = "Table"
 
 const TableHeader = React.forwardRef<

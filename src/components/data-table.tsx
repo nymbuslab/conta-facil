@@ -1,7 +1,31 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
+
+/** So mostra o indicador quando a tabela realmente tem conteudo fora da tela — sem isso, o
+ * gradiente aparecia tambem em tabelas de 2 colunas que ja cabem na largura do mobile,
+ * prometendo uma rolagem que nao existe. */
+function useTemRolagemHorizontal<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const [temRolagem, setTemRolagem] = useState(false)
+
+  useLayoutEffect(() => {
+    const elemento = ref.current
+    if (!elemento) return
+
+    const verificar = () => setTemRolagem(elemento.scrollWidth > elemento.clientWidth)
+    verificar()
+
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(verificar)
+    observer.observe(elemento)
+    return () => observer.disconnect()
+  })
+
+  return { ref, temRolagem }
+}
 
 interface DataTableProps<TData> {
   columns: ColumnDef<TData, unknown>[]
@@ -26,6 +50,7 @@ export function DataTable<TData>({
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
+  const { ref: containerRef, temRolagem } = useTemRolagemHorizontal<HTMLDivElement>()
 
   if (data.length === 0) {
     return (
@@ -37,11 +62,13 @@ export function DataTable<TData>({
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-border">
-      <div
-        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-card to-transparent"
-        aria-hidden="true"
-      />
-      <Table aria-label={ariaLabel}>
+      {temRolagem && (
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-card to-transparent"
+          aria-hidden="true"
+        />
+      )}
+      <Table aria-label={ariaLabel} containerRef={containerRef}>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>

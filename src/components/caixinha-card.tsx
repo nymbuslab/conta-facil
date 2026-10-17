@@ -23,7 +23,7 @@ export function CaixinhaCard({ caixinha, onDepositar, onResgatar, onExcluir }: C
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <span className="text-sm font-medium text-foreground">{caixinha.nome}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{caixinha.nome}</span>
         <button
           type="button"
           onClick={() => onExcluir(caixinha)}
