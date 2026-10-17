@@ -38,12 +38,14 @@ ignorado pelo Git.
 
 ## Arquitetura
 
-O navegador autentica pelo Neon Managed Auth e chama somente a Neon Function `api`, enviando o
-JWT da sessão. A Function valida o token, extrai o usuário e acessa o Postgres. O SPA nunca recebe
-credenciais do banco e cada consulta é filtrada por `user_id`.
+O navegador autentica pelo Neon Managed Auth (através de um proxy reverso same-origin,
+`functions/auth/[[catchall]].js`, para a sessão persistir em navegadores que bloqueiam cookie de
+terceiros) e chama somente a Neon Function `api`, enviando o JWT da sessão. A Function valida o
+token, extrai o usuário e acessa o Postgres. O SPA nunca recebe credenciais do banco e cada
+consulta é filtrada por `user_id`.
 
 ```text
-React SPA -> Neon Managed Auth -> JWT -> Neon Function -> Drizzle -> Neon Postgres
+React SPA -> proxy /auth/* -> Neon Managed Auth -> JWT -> Neon Function -> Drizzle -> Neon Postgres
 ```
 
 O schema está em `src/db/schema.ts`, as migrations em `drizzle/` e as rotas da Function em

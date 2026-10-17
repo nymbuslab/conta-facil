@@ -4,31 +4,27 @@
 
 ## 🔄 Em Andamento
 
-- Proxy reverso `/auth/*` para o Neon Auth (feature `proxy-reverso-neon-auth`), para resolver a
-  sessão não persistindo em navegadores que bloqueiam cookie de terceiros (Brave sempre, mobile
-  com frequência): causa raiz é o Neon Auth rodar num domínio diferente do app, tornando o
-  cookie de sessão "de terceiros". Código implementado (`functions/auth/[[catchall]].js`, com
-  correção de um achado de segurança real — path tentando reconstruir URL absoluta virava
-  proxy aberto —, CSP ajustada em `scripts/gerar-headers-producao.mjs`; build, lint e 351 testes
-  verdes, 5 novos) e commitado na branch `feature/proxy-reverso-neon-auth`.
-  **Validado em Preview de ponta a ponta**: `NEON_AUTH_UPSTREAM_URL` e `VITE_NEON_AUTH_BASE_URL`
-  configuradas no painel do Cloudflare Pages (achado real: o valor correto do Neon Auth inclui o
-  path `/neondb/auth`, não só o host — `.env.local`/`.env.test.local` já tinham isso certo, meu
-  primeiro valor estava sem o path), domínio de preview registrado como confiável no Neon Auth da
-  branch `test` (achado real: a validação de domínio confiável usa o header `Origin`, não outro
-  mecanismo). Login real com a conta de teste do pentest confirmou: cookie de sessão nasce
-  **sem** atributo `Domain` (host-only, resolve o problema) e ainda carrega `Partitioned`
-  (proteção extra). App real (bundle) confirmado fazendo a chamada de sessão pelo proxy
-  (`GET /auth/get-session` no próprio domínio, 200). **Falta**: repetir a configuração em
-  Production (mesmas duas env vars, path `/neondb/auth` incluído; trusted domain de produção já
-  deve estar OK, pois a origem continua `contafacil.nymbuslab.com.br`) e abrir o PR da branch
-  `feature/proxy-reverso-neon-auth`.
+_(nada no momento)_
 
 ## 📋 Próximos Passos
 
-_(nada no momento)_
+- [ ] (P1) Confirmar o golden path de login em produção com uma conta real (abrir o app, logar,
+  fechar e reabrir a aba) — validação que não pode ser feita sem usar credenciais reais ou criar
+  dado fictício em produção.
 
 ## ✅ Concluído
+
+- [x] Proxy reverso `/auth/*` para o Neon Auth (Cloudflare Pages Functions,
+  `functions/auth/[[catchall]].js`), resolvendo sessão não persistindo em navegadores que
+  bloqueiam cookie de terceiros (Brave sempre, mobile com frequência): `Set-Cookie` confirmado
+  host-only via login real em Preview com a conta de teste do pentest; achado de segurança real
+  (SSRF/proxy aberto na montagem da URL de destino) corrigido com testes; PR #5 revisado e
+  mergeado em `master`; implantado em `production` (`NEON_AUTH_UPSTREAM_URL` e
+  `VITE_NEON_AUTH_BASE_URL` configuradas no painel do Cloudflare Pages, rebuild feito, app real
+  confirmado chamando o proxy — `GET /auth/get-session` 200). Build, lint e 351 testes verdes (5
+  novos). Decisões e achados em `docs/sprintx/features/proxy-reverso-neon-auth/` e `DEPLOY.md` —
+  2026-10-17 (ressalva: login completo em produção não validado com credenciais reais — não há
+  conta de teste em produção; confirmação do usuário pendente, ver Próximos Passos)
 
 - [x] Parcelamento inverte o input: usuário informa o valor da parcela, não o total — a Function
   multiplica pela quantidade (120 × 10 = R$ 1.200,00). Validado em produção via browser real,

@@ -2,6 +2,11 @@
 
 Marcos entregues do Conta Fácil, em ordem cronológica.
 
+## 2026-10-17 — Sessão mais estável no login
+
+- Corrigido: em alguns navegadores (Brave, e com frequência no celular) era preciso fazer login
+  de novo toda vez que o app era aberto. Agora a sessão fica salva normalmente.
+
 ## 2026-10-16 — Origem do depósito na caixinha
 
 - Ao depositar numa caixinha, agora dá pra escolher se o dinheiro veio do saldo que você já

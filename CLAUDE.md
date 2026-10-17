@@ -148,8 +148,9 @@ corrido, não entra no filtro de mês.
   nos valores padrão do pacote. O frontend (Cloudflare Pages) gera `dist/_headers` **no build**
   (plugin Vite `headersDeProducao` em `vite.config.ts`, conteúdo montado por
   `scripts/gerar-headers-producao.mjs`), não como arquivo estático em `public/` — a CSP inclui
-  `connect-src` com a origem real da Function e do Neon Auth do momento do build (variam por
-  ambiente), além de HSTS, `X-Frame-Options`, `X-Content-Type-Options` e `Referrer-Policy`.
+  `connect-src` com a origem real da Function do momento do build (varia por ambiente), além de
+  HSTS, `X-Frame-Options`, `X-Content-Type-Options` e `Referrer-Policy`. Desde o proxy do Neon
+  Auth (abaixo), `connect-src` não precisa mais do host do Auth — a chamada é same-origin.
   Validado num servidor local servindo `dist/` com os headers reais (via Playwright): login
   carrega, fontes do Google Fonts carregam, e o fetch de autenticação chega ao Neon Auth sem
   bloqueio de CSP. Os dois cabeçalhos (Function e frontend) vieram de achados reais da rotina de
@@ -172,6 +173,17 @@ corrido, não entra no filtro de mês.
   `production` em 2026-10-16 — ver causa raiz e correção em `DEPLOY.md` sobre o `drizzle-kit
   migrate` nessa branch. Decisões e histórico em
   `docs/sprintx/features/origem-deposito-caixinha/`.
+- **Proxy reverso para o Neon Auth**: a sessão não persistia em navegadores que bloqueiam cookie
+  de terceiros (Brave sempre, mobile com frequência), porque o Neon Auth roda num domínio
+  diferente do app e o cliente (`@neondatabase/auth`) depende só de cookie cross-origin, sem
+  fallback de `localStorage`. `functions/auth/[[catchall]].js` (Cloudflare Pages Functions)
+  repassa tudo sob `/auth/*` para o host real do Neon Auth (env var `NEON_AUTH_UPSTREAM_URL`,
+  server-side, inclui o path `/neondb/auth`), fazendo o `Set-Cookie` nascer no domínio do app
+  (host-only, sem `Domain`). `VITE_NEON_AUTH_BASE_URL` passou a apontar para o próprio domínio
+  (`https://contafacil.nymbuslab.com.br/auth`) em vez do host direto do Neon Auth. Validado com
+  login real (conta de teste do pentest) em Preview antes do rollout para `production` em
+  2026-10-17. Decisões, achados e ordem de rollout em
+  `docs/sprintx/features/proxy-reverso-neon-auth/` e em `DEPLOY.md`.
 
 ## Env vars
 
@@ -180,7 +192,7 @@ Preenchidas por `neon link` em `.env.local` (nunca versionado — `.gitignore` c
 | Nome | Para quê |
 |---|---|
 | `DATABASE_URL` / `DATABASE_URL_UNPOOLED` | conexão Postgres, somente no servidor e scripts |
-| `NEON_AUTH_BASE_URL` / `NEON_AUTH_JWKS_URL` | Neon Managed Auth |
+| `NEON_AUTH_BASE_URL` / `NEON_AUTH_JWKS_URL` | Neon Managed Auth — `NEON_AUTH_BASE_URL` também é o valor de `NEON_AUTH_UPSTREAM_URL` (env var de Functions do Cloudflare Pages, usada só pelo proxy `functions/auth/[[catchall]].js`) |
 | `NEON_FUNCTION_API_BASE_URL` | URL pública da Function `api`, exposta ao Vite como `VITE_NEON_FUNCTION_API_BASE_URL` |
 | `FUNCTION_ALLOWED_ORIGINS` | Origens liberadas no CORS da Function (lista separada por vírgula) — declarada em `neon.ts`, obrigatória no deploy |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_ENDPOINT_URL_S3` / `AWS_REGION` | Object Storage (bucket `documentos`, privado) |
@@ -222,8 +234,10 @@ e Auth; frontend publicado no Cloudflare Pages (projeto `conta-facil`) no domín
   `VITE_NEON_AUTH_BASE_URL` são obrigatórias nas env vars de build (produção e preview) do projeto
   Pages — sem a segunda, `auth-context.tsx` lança `VITE_NEON_AUTH_BASE_URL nao definida` e a tela
   fica em branco (faltou na primeira conexão com o GitHub, só apareceu ao recarregar a página já
-  em produção). Se a Function ou o Auth mudarem de URL (troca de branch, recriação do projeto
-  Neon), as duas precisam ser atualizadas juntas no painel do Cloudflare Pages ou via API
+  em produção). Desde o proxy do Neon Auth, `VITE_NEON_AUTH_BASE_URL` aponta para o próprio
+  domínio do app (`https://contafacil.nymbuslab.com.br/auth`), não mais para o host direto do
+  Neon Auth — ver seção "Proxy do Neon Auth" em `DEPLOY.md`. Se a Function mudar de URL,
+  atualizar `VITE_NEON_FUNCTION_API_BASE_URL` no painel do Cloudflare Pages ou via API
   (`PATCH /accounts/{id}/pages/projects/conta-facil`, campo `deployment_configs.*.env_vars`).
 
 ## Rotina de pentest
