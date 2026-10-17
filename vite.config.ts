@@ -34,6 +34,10 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_NEON_AUTH_BASE_URL': JSON.stringify(authBaseUrl),
       'import.meta.env.VITE_NEON_FUNCTION_API_BASE_URL': JSON.stringify(functionBaseUrl),
     },
+    server: {
+      port: 5173,
+      strictPort: true,
+    },
     plugins: [react(), tailwindcss(), headersDeProducao(authBaseUrl, functionBaseUrl)],
     resolve: {
       alias: {
