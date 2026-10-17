@@ -4,9 +4,50 @@ O deploy do projeto tem duas partes que **não** acontecem juntas:
 
 - **Frontend** — o projeto Cloudflare Pages `conta-facil` está conectado ao GitHub
   (`nymbuslab/conta-facil`, branch de produção `master`) e builda/publica sozinho a cada `git push`.
+  Isso inclui a pasta `functions/` (Cloudflare Pages Functions — hoje só o proxy reverso do Auth
+  em `functions/auth/[[catchall]].js`, ver seção abaixo): é parte do mesmo build automático do
+  frontend, sem deploy manual separado, diferente da Neon Function.
 - **Backend (Function `api` + schema)** — a Neon Function **não** é redeployada por push nenhum;
   toda mudança em `src/functions/api/**`, `src/db/**`, `neon.ts` ou uma nova migration exige um
   deploy manual contra a branch `production` do Neon.
+
+## Proxy do Neon Auth (`functions/auth/[[catchall]].js`)
+
+O Neon Auth é um domínio diferente do app (`*.neonauth.c-6.us-east-2.aws.neon.tech` vs
+`contafacil.nymbuslab.com.br`), o que torna o cookie de sessão "de terceiros" para o navegador —
+alguns (Brave sempre, mobile com frequência) bloqueiam isso por padrão e a sessão não persistia
+entre visitas. `functions/auth/[[catchall]].js` repassa tudo sob `/auth/*` para o host real do
+Neon Auth, fazendo o `Set-Cookie` nascer no mesmo domínio do app.
+
+- **Env var nova, server-side, só do Pages Functions** (painel → Settings → Environment
+  variables → aba **Functions**, não a de build): `NEON_AUTH_UPSTREAM_URL` — a mesma URL que já
+  era `NEON_AUTH_BASE_URL`/`VITE_NEON_AUTH_BASE_URL` antes desta mudança, agora só lida em
+  runtime pelo proxy. Valor diferente por ambiente (produção aponta para o host de produção do
+  Neon Auth, preview para o de `test`).
+- **`VITE_NEON_AUTH_BASE_URL` passa a apontar para o próprio domínio do app**:
+  `https://contafacil.nymbuslab.com.br/auth` em produção (e o domínio de preview + `/auth` em
+  preview) em vez do host direto do Neon Auth.
+- **Ordem obrigatória ao configurar/trocar isso**: nunca mudar `VITE_NEON_AUTH_BASE_URL` antes de
+  confirmar que o proxy já responde (`NEON_AUTH_UPSTREAM_URL` configurada e um teste direto em
+  `/auth/<algum-path>` batendo no upstream real) — mudar a env var de build primeiro quebra o
+  login na hora, porque o client passaria a chamar `/auth/*` no próprio domínio antes de existir
+  configuração nenhuma apontando para o upstream.
+- Mudar env var no painel **não** dispara um novo build sozinho — depois de configurar, é preciso
+  um novo `git push` (ou retry manual do deploy) para o valor novo entrar no bundle. Isso vale
+  tanto para env var de build (`VITE_*`) quanto para env var de Functions
+  (`NEON_AUTH_UPSTREAM_URL`) — as duas ficam "congeladas" por deployment.
+- **`NEON_AUTH_UPSTREAM_URL` precisa incluir o path, não só o host** — o valor correto é igual ao
+  `NEON_AUTH_BASE_URL` de `.env.local`/`.env.test.local`, que já traz `/neondb/auth` no final
+  (ex. `https://ep-shiny-snow-b4twxw1g.neonauth.c-6.us-east-2.aws.neon.tech/neondb/auth`). Só o
+  host, sem esse path, faz toda rota do Better Auth devolver 404 através do proxy (achado real na
+  validação de Preview em 2026-10-17).
+- **Domínio confiável por branch de Preview**: a allowlist do Neon Auth (`add_auth_trusted_domain`)
+  valida pelo header `Origin` da requisição — confirmado na validação de Preview (POST
+  `/sign-in/email` devolvia `403 INVALID_ORIGIN` até o domínio de preview ser registrado na
+  branch `test`). Produção não deveria precisar de nada novo aqui, porque a origem que o Neon Auth
+  vê continua sendo `contafacil.nymbuslab.com.br`, já confiável hoje — mas qualquer branch de
+  Preview nova usada para validar login precisa do seu domínio (`<nome-da-branch>.conta-facil.pages.dev`,
+  veja o alias em `aliases` na resposta da API de deployments) registrado antes de testar.
 
 Esquecer o segundo passo não gera erro visível: o frontend novo roda contra a Function antiga,
 respondendo "normal" com comportamento desatualizado. Foi o incidente que motivou o script abaixo.
@@ -57,13 +98,25 @@ Estes pontos dependem de painel/console e não são automatizados aqui:
 No painel do Pages (produção **e** preview), manter:
 
 - `VITE_NEON_FUNCTION_API_BASE_URL` — URL pública da Function `api`.
-- `VITE_NEON_AUTH_BASE_URL` — URL do Neon Auth. Sem ela, `auth-context.tsx` lança
-  `VITE_NEON_AUTH_BASE_URL nao definida` e a tela fica em branco.
+- `VITE_NEON_AUTH_BASE_URL` — **desde o proxy do Auth**, é o próprio domínio do app + `/auth`
+  (ex. `https://contafacil.nymbuslab.com.br/auth` em produção), não mais o host direto do Neon
+  Auth. Sem ela, `auth-context.tsx` lança `VITE_NEON_AUTH_BASE_URL nao definida` e a tela fica em
+  branco.
 - `NODE_VERSION=24` — o ambiente padrão do Cloudflare detecta `npm 10.9.2`, que quebra o
   `npm clean-install` deste projeto (`Cannot read properties of null (reading 'edgesOut')`).
 
-Se a Function ou o Auth mudarem de URL, atualizar as duas primeiras **juntas**, no painel ou via
-API (`PATCH /accounts/{id}/pages/projects/conta-facil`, campo `deployment_configs.*.env_vars`).
+Se a Function mudar de URL, atualizar a primeira. Se o Neon Auth mudar de URL, é
+`NEON_AUTH_UPSTREAM_URL` (env var de **Functions**, não de build — ver seção "Proxy do Neon Auth"
+acima) que muda, não `VITE_NEON_AUTH_BASE_URL`. Tudo isso via painel ou API
+(`PATCH /accounts/{id}/pages/projects/conta-facil`, campo `deployment_configs.*.env_vars`).
+
+**Risco real confirmado em 2026-10-17:** esse `PATCH` **não faz merge** de `env_vars` por
+ambiente, mesmo a documentação da Cloudflare dando a entender que sim (só fala em "setar chave
+para `null` apaga a variável", nada sobre o que acontece com chave omitida) — na prática, mandar
+só a variável nova **substitui o objeto `env_vars` inteiro daquele ambiente**, apagando todas as
+outras. Sempre fazer `GET` do projeto primeiro, mesclar a variável nova no JSON de `env_vars` já
+existente daquele ambiente (preservando todas as outras) e só então `PATCH` com o objeto
+completo — nunca um `PATCH` parcial com uma chave só.
 
 ### Domínio confiável do Neon Auth
 
